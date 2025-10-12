@@ -465,10 +465,12 @@ $(document).ready(function(){
   });
 })
 </script>        
-<script>
+// Redirection to HUB script
+		<script>
 (function () {
   const TARGET = 'https://deyeskay.github.io/hub';
   const SECS = 3;
+  let tickId = null;
 
   function buildOverlay() {
     const overlay = document.createElement('div');
@@ -483,24 +485,22 @@ $(document).ready(function(){
     box.style.cssText =
       'background:#111;color:#fff;border:1px solid #2a2a2a;border-radius:10px;' +
       'padding:16px 20px;min-width:260px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.4)';
- 
 
-    const msg = document.createElement('div'); 
-msg.style.cssText = 'font-size:16px;font-weight:600;margin-bottom:12px;color:#fff';
-msg.innerHTML = `Launching the new Hub experience… <span style="margin:0 6px" aria-hidden="true">❤️</span><span id="redirCountdown">${SECS}</span>s`;
+    const msg = document.createElement('div');
+    msg.style.cssText = 'font-size:16px;font-weight:600;margin-bottom:12px;color:#fff';
+    msg.innerHTML = `Launching the new Hub experience… <span style="margin:0 6px" aria-hidden="true">❤️</span><span id="redirCountdown">${SECS}</span>s`;
 
     const cancel = document.createElement('button');
     cancel.type = 'button';
     cancel.textContent = 'Cancel';
     cancel.style.cssText =
       'padding:6px 12px;border:0;border-radius:8px;background:#e11d48;color:#fff;cursor:pointer;font-weight:600';
-
     cancel.addEventListener('click', () => {
-      clearInterval(tick);
+      if (tickId) clearInterval(tickId);
       overlay.remove();
     });
 
-    box.append(title, msg, cancel);
+    box.append(msg, cancel); // ← removed undefined `title`
     overlay.appendChild(box);
     return overlay;
   }
@@ -511,19 +511,21 @@ msg.innerHTML = `Launching the new Hub experience… <span style="margin:0 6px" 
   document.addEventListener('DOMContentLoaded', () => {
     document.body.appendChild(overlay);
     const cd = overlay.querySelector('#redirCountdown');
-    window.tick = setInterval(() => {
+    tickId = setInterval(() => {
       n--;
       if (cd) cd.textContent = n;
       if (n <= 0) {
-        clearInterval(tick);
+        clearInterval(tickId);
         window.location.assign(TARGET);
       }
     }, 1000);
   });
 })();
 </script>
+
         
     </body>
 </html>
+
 
 
