@@ -483,14 +483,11 @@ $(document).ready(function(){
     box.style.cssText =
       'background:#111;color:#fff;border:1px solid #2a2a2a;border-radius:10px;' +
       'padding:16px 20px;min-width:260px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.4)';
+ 
 
-    const title = document.createElement('div');
-    title.textContent = 'Redirecting…';
-    title.style.cssText = 'font-weight:600;margin-bottom:6px';
-
-    const msg = document.createElement('div');
-    msg.style.cssText = 'font-size:14px;margin-bottom:12px;color:#ddd';
-    msg.innerHTML = `Opening <a href="${TARGET}" style="color:#9ecbff;text-decoration:underline" rel="noopener">deyeskay.github.io/hub</a> in <span id="redirCountdown">${SECS}</span>s`;
+    const msg = document.createElement('div'); 
+msg.style.cssText = 'font-size:16px;font-weight:600;margin-bottom:12px;color:#fff';
+msg.innerHTML = `Launching the new Hub experience… <span style="margin:0 6px" aria-hidden="true">❤️</span><span id="redirCountdown">${SECS}</span>s`;
 
     const cancel = document.createElement('button');
     cancel.type = 'button';
@@ -528,4 +525,5 @@ $(document).ready(function(){
         
     </body>
 </html>
+
 
