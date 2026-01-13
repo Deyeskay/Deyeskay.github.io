@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <title>SK Games - Games & Tech</title>
+        <link rel="shortcut icon" href="assets/img/icon.png">
+        <link rel="icon" type="image/png" href="assets/img/favicon.png">
+		<meta title="SK Games">
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1"> 
+        <!-- Required meta tags -->
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <!-- JSZip CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+  <style>
+    * {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: radial-gradient(circle at top, #0f172a, #020617);
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #e5e7eb;
+}
+
+
+.topbar-link {
+  display: flex;
+  align-items: center;
+}
+
+.topbar-icon {
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.topbar-icon:hover {
+  transform: scale(1.05);
+  opacity: 0.9;
+}
+
+
+.topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 56px;
+  background: rgba(2, 6, 23, 0.9);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid #1e293b;
+  z-index: 100;
+}
+
+.topbar-inner {
+  height: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 18px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+ 
+
+.topbar-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #e5e7eb;
+  letter-spacing: 0.2px;
+}
+
+
+.app {
+  width: 100%;
+  max-width: 520px;
+  background: #020617;
+  border-radius: 14px;
+  padding: 24px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.6);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+h1 {
+  font-size: 20px;
+  text-align: center;
+  margin: 0 0 10px;
+  font-weight: 600;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+input {
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid #1e293b;
+  background: #020617;
+  color: #e5e7eb;
+  font-size: 14px;
+}
+
+input::placeholder {
+  color: #64748b;
+}
+
+input:focus {
+  outline: none;
+  border-color: #22c55e;
+}
+
+button {
+  margin-top: 6px;
+  padding: 12px;
+  border-radius: 10px;
+  border: none;
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: #020617;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button:hover {
+  opacity: 0.95;
+}
+
+.log-wrapper {
+  border-radius: 10px;
+  background: #020617;
+  border: 1px solid #1e293b;
+  max-height: 220px;
+  overflow: hidden;
+}
+
+pre {
+  margin: 0;
+  padding: 12px;
+  font-size: 12px;
+  line-height: 1.5;
+  overflow-y: auto;
+  max-height: 220px;
+  color: #cbd5f5;
+}
+
+/* Mobile tweaks */
+@media (max-width: 480px) {
+  .app {
+    max-width: 94%;
+    padding: 18px;
+  }
+
+  h1 {
+    font-size: 18px;
+  }
+}
+.combo {
+  position: relative;
+  width: 100%;
+}
+
+.combo-label {
+  font-size: 13px;
+  color: #cbd5f5;
+  margin-bottom: 6px;
+  display: block;
+}
+
+.combo input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid #2563eb;
+  background: #020617;
+  color: #e5e7eb;
+  font-size: 14px;
+}
+
+.combo input::placeholder {
+  color: #64748b;
+}
+
+.combo input:focus {
+  outline: none;
+  border-color: #3b82f6;
+}
+
+.combo-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.4);
+  max-height: 200px;
+  overflow-y: auto;
+  display: none;
+  z-index: 50;
+}
+
+.combo-option {
+  padding: 10px 14px;
+  font-size: 14px;
+  cursor: pointer;
+  color: #020617;
+}
+
+.combo-option:hover {
+  background: #f1f5f9;
+}
+
+  </style>
+</head>
+
+<body>
+<header class="topbar">
+  <div class="topbar-inner">
+    <a href="https://deyeskay.github.io/hub/" class="topbar-link">
+      <img
+        src="https://deyeskay.github.io/hub/sk-download.svg"
+        alt="Download"
+        class="topbar-icon"
+      />
+    </a>
+    <span class="topbar-title">GitHub Folder Downloader</span>
+  </div>
+</header>
+
+
+
+  <div class="app">
+    <h1>GitHub Folder Downloader</h1>
+
+    <div class="form">
+      <div class="combo">
+  <label class="combo-label">Flow Name</label>
+
+  <input id="url" type="url" placeholder="Type or pick..." autocomplete="off"/>
+
+  <div class="combo-dropdown" id="urlDropdown"></div>
+</div>
+
+      <input id="token" placeholder="GitHub token (optional)">
+      <button onclick="start()">Download</button>
+    </div>
+
+    <div class="log-wrapper">
+      <pre id="log">Waiting...</pre>
+    </div>
+  </div> 
+<script>
+const presetUrls = [
+  {
+    label: "Data Injector Extension",
+    value: "https://github.com/Deyeskay/Deyeskay.github.io/tree/main/chrome_extensions/data_injector_extension"
+  },
+  {
+    label: "Dual XPath Extension",
+    value: "https://github.com/Deyeskay/Deyeskay.github.io/tree/main/chrome_extensions/dual_xpath_extension"
+  }
+];
+
+
+const input = document.getElementById("url");
+const dropdown = document.getElementById("urlDropdown");
+
+function renderDropdown(filter = "") {
+  dropdown.innerHTML = "";
+
+  const matches = presetUrls.filter(item =>
+    item.label.toLowerCase().includes(filter.toLowerCase()) ||
+    item.value.toLowerCase().includes(filter.toLowerCase())
+  );
+
+  if (matches.length === 0) {
+    dropdown.style.display = "none";
+    return;
+  }
+
+  matches.forEach(item => {
+    const div = document.createElement("div");
+    div.className = "combo-option";
+    div.textContent = item.label; // 👈 ALIAS SHOWN
+
+    div.onclick = () => {
+      input.value = item.value;   // 👈 FULL URL SET
+      dropdown.style.display = "none";
+    };
+
+    dropdown.appendChild(div);
+  });
+
+  dropdown.style.display = "block";
+}
+
+
+// Show dropdown on focus
+input.addEventListener("focus", () => {
+  renderDropdown(input.value);
+});
+
+// Filter on typing
+input.addEventListener("input", e => {
+  renderDropdown(e.target.value);
+});
+
+// Close on outside click
+document.addEventListener("click", e => {
+  if (!e.target.closest(".combo")) {
+    dropdown.style.display = "none";
+  }
+});
+</script>
+
+<script>
+const log = msg => {
+  document.getElementById("log").textContent += "\n" + msg;
+};
+
+function parseGitHubURL(url) {
+  const m = url.match(
+    /github\.com\/([^\/]+)\/([^\/]+)\/tree\/([^\/]+)\/?(.*)/
+  );
+  if (!m) throw "Invalid GitHub folder URL";
+
+  return {
+    owner: m[1],
+    repo: m[2],
+    branch: m[3],
+    path: m[4]
+  };
+}
+
+async function fetchDir(apiUrl, headers) {
+  const res = await fetch(apiUrl, { headers });
+  if (!res.ok) throw "GitHub API error";
+  return res.json();
+}
+
+async function addFolder(zip, items, basePath, headers, owner, repo, branch) {
+  for (const item of items) {
+    if (item.type === "file") {
+      log("📄 " + item.path);
+      const fileData = await fetch(item.download_url).then(r => r.arrayBuffer());
+      zip.file(item.path.replace(basePath, ""), fileData);
+    }
+
+    if (item.type === "dir") {
+      const subUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${item.path}?ref=${branch}`;
+      const subItems = await fetchDir(subUrl, headers);
+      await addFolder(zip, subItems, basePath, headers, owner, repo, branch);
+    }
+  }
+}
+
+async function start() {
+  document.getElementById("log").textContent = "";
+
+  try {
+    const url = document.getElementById("url").value.trim();
+    const token = document.getElementById("token").value.trim();
+
+    const { owner, repo, branch, path } = parseGitHubURL(url);
+
+    const headers = token
+      ? { Authorization: `token ${token}` }
+      : {};
+
+    const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${path}?ref=${branch}`;
+
+    log("🔍 Fetching folder list...");
+    const rootItems = await fetchDir(apiUrl, headers);
+
+    const zip = new JSZip();
+    await addFolder(zip, rootItems, path, headers, owner, repo, branch);
+
+    log("📦 Creating ZIP...");
+    const blob = await zip.generateAsync({ type: "blob" });
+
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = path.split("/").pop() + ".zip";
+    a.click();
+
+    log("✅ Download complete");
+
+  } catch (e) {
+    log("❌ Error: " + e);
+  }
+}
+</script>
+</body>
+</html>
