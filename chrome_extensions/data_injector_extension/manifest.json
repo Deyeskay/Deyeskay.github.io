@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "Sashi's Data Tool",
+  "version": "1.0.0",
+  "description": "Save credentials by Environment + Flow and inject them into focused inputs.",
+  "permissions": ["storage", "activeTab"],
+  "host_permissions": ["<all_urls>"],
+  "action": {
+    "default_title": "Sashi's Data Tool",
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

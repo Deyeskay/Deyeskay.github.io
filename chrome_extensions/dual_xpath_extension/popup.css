@@ -1,0 +1,183 @@
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  width: 380px;
+  background: #0b0f17;
+  color: #e9eef7;
+}
+
+.wrap { padding: 12px; }
+
+.top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.title {
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  opacity: 0.95;
+}
+
+.section {
+  background: #111a2b;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  padding: 10px;
+  margin-bottom: 10px;
+}
+
+.sectionTitle {
+  font-size: 12px;
+  opacity: 0.85;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+.radio {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.03);
+  cursor: pointer;
+  user-select: none;
+}
+
+.radio input { accent-color: #77a7ff; }
+
+.hint {
+  margin-top: 8px;
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.card {
+  background: rgba(0,0,0,0.18);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 12px;
+  padding: 10px;
+  margin-bottom: 10px;
+}
+
+.cardHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.cardTitle { font-weight: 650; font-size: 13px; }
+
+.meta {
+  font-size: 12px;
+  opacity: 0.82;
+  margin-bottom: 8px;
+}
+
+.ta {
+  width: 100%;
+  resize: none;
+  min-height: 56px;
+  padding: 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.04);
+  color: #e9eef7;
+  outline: none;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 12px;
+  line-height: 1.25;
+}
+
+.ta.big { min-height: 82px; }
+
+.btn {
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.06);
+  color: #e9eef7;
+  padding: 8px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 12px;
+}
+.btn:hover { background: rgba(255,255,255,0.10); }
+.btn.small { padding: 6px 8px; font-size: 11px; }
+.btn.danger { border-color: rgba(255,80,80,0.35); }
+
+.status {
+  margin-top: 8px;
+  font-size: 12px;
+  opacity: 0.85;
+  min-height: 18px;
+}
+/* --- Element 2 dropdown readability --- */
+select.ta {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background: rgba(255,255,255,0.06);
+  color: #e9eef7;
+  border: 1px solid rgba(255,255,255,0.12);
+  padding-right: 28px; /* space for arrow */
+}
+
+/* dropdown arrow */
+select.ta {
+  background-image:
+    linear-gradient(45deg, transparent 50%, rgba(233,238,247,0.9) 50%),
+    linear-gradient(135deg, rgba(233,238,247,0.9) 50%, transparent 50%),
+    linear-gradient(to right, transparent, transparent);
+  background-position:
+    calc(100% - 16px) 50%,
+    calc(100% - 10px) 50%,
+    100% 0;
+  background-size:
+    6px 6px,
+    6px 6px,
+    2.5em 2.5em;
+  background-repeat: no-repeat;
+}
+
+/* Some Chromium builds respect option styling; not all do, but this helps */
+select.ta option {
+  background: #0b0f17;
+  color: #e9eef7;
+}
+.topActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.iconBtn {
+  background: transparent;
+  border: none;
+  color: #e9eef7;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 6px;
+}
+
+.iconBtn:hover {
+  background: rgba(255,255,255,0.12);
+}

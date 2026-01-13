@@ -1,0 +1,88 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Sashi's Dual XPath Finder</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+    <div class="title">Sashi's Dual XPath Finder</div>
+
+    <div class="topActions">
+        <button id="expandBtn" class="iconBtn" title="Open in new tab">⤢</button>
+
+        <label class="toggle">
+        <input type="checkbox" id="enabledToggle" />
+        <span>Enabled</span>
+        </label>
+    </div>
+    </div>
+
+
+    <div class="section">
+      <div class="sectionTitle">Select Mode</div>
+      <div class="row">
+        <label class="radio">
+          <input type="radio" name="mode" value="E1" id="modeE1" />
+          <span>Pick Element 1</span>
+        </label>
+        <label class="radio">
+          <input type="radio" name="mode" value="E2" id="modeE2" />
+          <span>Pick Element 2</span>
+        </label>
+      </div>
+      <div class="hint">Hover highlights. Click captures based on selected mode.</div>
+    </div>
+
+    <div class="section">
+      <div class="sectionTitle">Captured</div>
+
+      <div class="card">
+        <div class="cardHead">
+          <div class="cardTitle">Element 1</div>
+          <button class="btn small" id="clearE1">Clear</button>
+        </div>
+        <div class="meta" id="e1Meta">Not selected</div>
+        <textarea class="ta" id="e1Xpath" readonly placeholder="XPath for Element 1..."></textarea>
+      </div>
+
+      <div class="card">
+        <div class="cardHead">
+          <div class="cardTitle">Element 2</div>
+          <button class="btn small" id="clearE2">Clear</button>
+        </div>
+        <div class="meta" id="e2Meta">Not selected</div>
+        <textarea class="ta" id="e2Xpath" readonly placeholder="XPath for Element 2..."></textarea>
+        <input type="text" id="e2Search" class="ta" placeholder="Search NCA xpath..."/>
+        <select id="e2Options" class="ta"></select>
+    </div>
+
+    <div class="card">
+    <div class="cardHead">
+        <div class="cardTitle">NCA (Ancestor)</div>
+    </div>
+    <input type="text" id="ncaSearch" class="ta" placeholder="Search NCA xpath..."/>
+    <select id="ncaOptions" class="ta"></select>
+    </div>
+ 
+    </div>
+
+    <div class="section">
+      <div class="sectionTitle">Final XPath</div>
+      <textarea class="ta big" id="finalXpath" readonly placeholder="Final combined XPath will appear here..."></textarea>
+
+      <div class="row">
+        <button class="btn" id="generateBtn">Generate</button>
+        <button class="btn" id="copyBtn">Copy</button>
+        <button class="btn danger" id="clearAllBtn">Clear All</button>
+      </div>
+
+      <div class="status" id="status"></div>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
