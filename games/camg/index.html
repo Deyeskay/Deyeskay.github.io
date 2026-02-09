@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Person Aim + Shoot + Color Mode (Local)</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.17.0"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+
+<style>
+  body{
+    margin:0;
+    font-family:Arial, sans-serif;
+    background:#111;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    min-height:100vh;
+    color:white;
+    padding:14px 0;
+    box-sizing:border-box;
+  }
+  h2{ margin:0 0 10px; }
+
+  .wrapper{
+    position:relative;
+    width:92vw;
+    max-width:520px;
+  }
+
+  video{
+    width:100%;
+    height:auto;
+    border-radius:14px;
+    display:block;
+    transform-origin:center;
+  }
+
+  canvas{
+    position:absolute;
+    left:0; top:0;
+    width:100%;
+    height:100%;
+    border-radius:14px;
+    pointer-events:none;
+  }
+
+  .crosshair{
+    position:absolute;
+    left:50%;
+    top:50%;
+    width:34px;
+    height:34px;
+    transform:translate(-50%,-50%);
+    pointer-events:none;
+    opacity:0.95;
+  }
+  .crosshair:before,
+  .crosshair:after{
+    content:"";
+    position:absolute;
+    left:50%;
+    top:50%;
+    transform:translate(-50%,-50%);
+    background:rgba(255,255,255,0.85);
+    border-radius:2px;
+  }
+  .crosshair:before{ width:34px; height:3px; }
+  .crosshair:after{ width:3px; height:34px; }
+  .crosshair .dot{
+    position:absolute;
+    left:50%;
+    top:50%;
+    width:6px;
+    height:6px;
+    transform:translate(-50%,-50%);
+    background:rgba(255,255,255,0.95);
+    border-radius:50%;
+  }
+
+  #switchBtn{
+    position:absolute;
+    top:10px;
+    right:10px;
+    width:48px;
+    height:48px;
+    border-radius:50%;
+    border:none;
+    background:rgba(0,0,0,0.7);
+    color:white;
+    font-size:22px;
+    cursor:pointer;
+    z-index:5;
+  }
+
+  /* Controls panel */
+  .panel{
+    width:92vw;
+    max-width:520px;
+    background:#0b1220;
+    border:1px solid rgba(255,255,255,0.08);
+    border-radius:14px;
+    padding:12px;
+    margin-top:12px;
+    box-sizing:border-box;
+  }
+  .row{
+    display:flex;
+    gap:10px;
+    align-items:center;
+    justify-content:space-between;
+    flex-wrap:wrap;
+  }
+  .row + .row{ margin-top:10px; }
+
+  .pill{
+    background:rgba(255,255,255,0.08);
+    padding:8px 10px;
+    border-radius:999px;
+    font-size:13px;
+    opacity:0.95;
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+  }
+
+  .btn{
+    border:none;
+    border-radius:12px;
+    padding:10px 12px;
+    font-weight:800;
+    cursor:pointer;
+    color:white;
+    background:#334155;
+  }
+  .btn:active{ transform:scale(0.99); }
+
+  #shootBtn{
+    width:100%;
+    padding:14px 18px;
+    border-radius:14px;
+    border:none;
+    background:#2563eb;
+    color:white;
+    font-size:18px;
+    font-weight:800;
+    cursor:pointer;
+  }
+
+  #statusRow{
+    width:100%;
+    display:flex;
+    gap:10px;
+    align-items:center;
+    justify-content:space-between;
+  }
+  #status{
+    flex:1;
+    font-size:14px;
+    font-weight:bold;
+    padding:10px 14px;
+    border-radius:10px;
+  }
+  .detected{ background:#16a34a; }
+  .notfound{ background:#dc2626; }
+  .loading{ background:#6b7280; }
+
+  #hitBadge{
+    min-width:92px;
+    text-align:center;
+    font-weight:900;
+    padding:10px 12px;
+    border-radius:10px;
+    background:#334155;
+  }
+  .hit{ background:#22c55e !important; }
+  .miss{ background:#ef4444 !important; }
+  .blocked{ background:#f59e0b !important; color:#111 !important; } /* color mismatch */
+
+  #hint{
+    margin-top:10px;
+    opacity:0.8;
+    font-size:13px;
+    text-align:center;
+    line-height:1.35;
+  }
+
+  input[type="color"]{
+    width:44px;
+    height:34px;
+    border:none;
+    background:transparent;
+    padding:0;
+    cursor:pointer;
+  }
+
+  label{
+    font-size:13px;
+    opacity:0.9;
+  }
+</style>
+</head>
+
+<body>
+
+<h2>Live Aim + Shoot (Color Mode)</h2>
+
+<div class="wrapper" id="wrapper">
+  <video id="video" autoplay playsinline muted></video>
+  <canvas id="canvas"></canvas>
+  <div class="crosshair"><div class="dot"></div></div>
+  <button id="switchBtn" title="Switch camera">🔄</button>
+</div>
+
+<div class="panel">
+  <div class="row">
+    <div class="pill">
+      <label style="display:flex;align-items:center;gap:8px;">
+        <input type="checkbox" id="colorModeToggle" />
+        Color Mode
+      </label>
+    </div>
+
+    <div class="pill" title="Enemy uniform color to count as HIT">
+      Enemy Color:
+      <input type="color" id="enemyColorPicker" value="#ff0000" />
+      <button class="btn" id="presetRed" style="padding:8px 10px;">Red</button>
+      <button class="btn" id="presetGreen" style="padding:8px 10px;">Green</button>
+    </div>
+
+    <div class="pill">Score: <span id="scoreText">0</span></div>
+  </div>
+
+  <div class="row">
+    <button id="shootBtn">🔫 SHOOT</button>
+  </div>
+
+  <div class="row" id="statusRow">
+    <div id="status" class="loading">Loading model…</div>
+    <div id="hitBadge">—</div>
+  </div>
+
+  <div id="hint">
+    HIT requires: crosshair hit + (if Color Mode ON) target region matches selected enemy color.
+  </div>
+</div>
+
+<script>
+/* =========================
+   Elements
+========================= */
+const video = document.getElementById("video");
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d", { alpha: true });
+const switchBtn = document.getElementById("switchBtn");
+const shootBtn = document.getElementById("shootBtn");
+const wrapper = document.getElementById("wrapper");
+const statusText = document.getElementById("status");
+const hitBadge = document.getElementById("hitBadge");
+
+const colorModeToggle = document.getElementById("colorModeToggle");
+const enemyColorPicker = document.getElementById("enemyColorPicker");
+const presetRed = document.getElementById("presetRed");
+const presetGreen = document.getElementById("presetGreen");
+const scoreText = document.getElementById("scoreText");
+
+/* Offscreen canvas to sample pixels from the video */
+const sampleCanvas = document.createElement("canvas");
+const sampleCtx = sampleCanvas.getContext("2d", { willReadFrequently: true });
+
+let model;
+let currentStream = null;
+
+/* =========================
+   Camera defaults
+========================= */
+let facingMode = "environment"; // back camera first
+
+/* =========================
+   Detection config
+========================= */
+const DETECT_FPS = 10;
+const DETECT_INTERVAL_MS = 1000 / DETECT_FPS;
+
+const PERSON_SCORE_MIN = 0.55;
+
+const OVERLAP_MODE = true;
+const TARGET_BOX_COLOR = "#00ffff";
+const OTHER_BOX_COLOR = "#00ff00";
+
+let lastDetectTime = 0;
+let lastPersons = [];
+let lastTarget = null;
+let isDetecting = false;
+
+let score = 0;
+
+/* =========================
+   Color mode config
+========================= */
+// HSV match tolerances (tune these later)
+const HUE_TOL = 18;         // +/- degrees
+const SAT_MIN = 0.35;       // ignore low saturation pixels (gray/white/black)
+const VAL_MIN = 0.20;       // ignore very dark pixels
+const MATCH_RATIO_MIN = 0.18; // at least 18% pixels in region must match
+
+/* We'll sample torso-ish region inside the bbox */
+const REGION = {
+  // relative to bbox: a center rectangle
+  x0: 0.25, y0: 0.25,
+  x1: 0.75, y1: 0.80
+};
+
+/* =========================
+   Utilities
+========================= */
+function bboxCenter(bbox){
+  const [x,y,w,h] = bbox;
+  return { x: x + w/2, y: y + h/2 };
+}
+
+function pointInBbox(px, py, bbox){
+  const [x,y,w,h] = bbox;
+  return (px >= x && px <= x + w && py >= y && py <= y + h);
+}
+
+function dist2(ax, ay, bx, by){
+  const dx = ax - bx, dy = ay - by;
+  return dx*dx + dy*dy;
+}
+
+function clamp(v, min, max){ return Math.max(min, Math.min(max, v)); }
+
+/* Convert hex (#rrggbb) to RGB */
+function hexToRgb(hex){
+  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  if(!m) return { r:255, g:0, b:0 };
+  return { r: parseInt(m[1],16), g: parseInt(m[2],16), b: parseInt(m[3],16) };
+}
+
+/* RGB -> HSV (h in degrees 0..360) */
+function rgbToHsv(r, g, b){
+  r/=255; g/=255; b/=255;
+  const max = Math.max(r,g,b), min = Math.min(r,g,b);
+  const d = max - min;
+
+  let h = 0;
+  if(d === 0) h = 0;
+  else if(max === r) h = ((g - b) / d) % 6;
+  else if(max === g) h = (b - r) / d + 2;
+  else h = (r - g) / d + 4;
+
+  h = Math.round(h * 60);
+  if(h < 0) h += 360;
+
+  const s = max === 0 ? 0 : d / max;
+  const v = max;
+  return { h, s, v };
+}
+
+function hueDistance(a, b){
+  let d = Math.abs(a - b);
+  return Math.min(d, 360 - d);
+}
+
+/* =========================
+   Resize canvas to match display
+========================= */
+function resizeCanvasToDisplaySize(){
+  const rect = wrapper.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+
+  const displayW = Math.round(rect.width * dpr);
+  const displayH = Math.round(rect.height * dpr);
+
+  if (canvas.width !== displayW || canvas.height !== displayH){
+    canvas.width = displayW;
+    canvas.height = displayH;
+  }
+
+  // set drawing transform to DPR scale
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.scale(dpr, dpr);
+}
+
+/* =========================
+   Setup camera
+========================= */
+async function setupCamera(){
+  if(currentStream){
+    currentStream.getTracks().forEach(t => t.stop());
+  }
+
+  currentStream = await navigator.mediaDevices.getUserMedia({
+    video: { facingMode }
+  });
+
+  video.srcObject = currentStream;
+
+  const isFront = (facingMode === "user");
+  video.style.transform = isFront ? "scaleX(-1)" : "scaleX(1)";
+
+  await new Promise(resolve => {
+    video.onloadedmetadata = () => {
+      video.play();
+      resolve();
+    };
+  });
+
+  await new Promise(r => requestAnimationFrame(r));
+  resizeCanvasToDisplaySize();
+  window.addEventListener("resize", resizeCanvasToDisplaySize, { passive: true });
+}
+
+/* =========================
+   Map bbox from video pixels -> displayed CSS pixels
+========================= */
+function mapBboxToCanvas(bbox){
+  const [x,y,w,h] = bbox;
+  const vw = video.videoWidth || 1;
+  const vh = video.videoHeight || 1;
+
+  const rect = wrapper.getBoundingClientRect();
+  const cw = rect.width;
+  const ch = rect.height;
+
+  const sx = cw / vw;
+  const sy = ch / vh;
+
+  return [x*sx, y*sy, w*sx, h*sy]; // CSS pixels
+}
+
+/* =========================
+   Choose target candidate
+========================= */
+function getCrosshairCssPoint(){
+  const rect = wrapper.getBoundingClientRect();
+  return { x: rect.width/2, y: rect.height/2 }; // CSS pixels
+}
+
+function chooseTarget(persons){
+  if(!persons.length) return null;
+
+  const { x:cx, y:cy } = getCrosshairCssPoint();
+
+  let overlapCandidates = [];
+  for (const p of persons){
+    if(pointInBbox(cx, cy, p.bboxCanvas)){
+      overlapCandidates.push(p);
+    }
+  }
+
+  const list = (OVERLAP_MODE && overlapCandidates.length) ? overlapCandidates : persons;
+
+  let best = null;
+  let bestD = Infinity;
+  for (const p of list){
+    const c = bboxCenter(p.bboxCanvas);
+    const d = dist2(c.x, c.y, cx, cy);
+    if(d < bestD){
+      bestD = d;
+      best = p;
+    }
+  }
+  return best;
+}
+
+/* =========================
+   Draw
+========================= */
+function drawScene(persons, target){
+  const rect = wrapper.getBoundingClientRect();
+  ctx.clearRect(0, 0, rect.width, rect.height);
+
+  const isFront = (facingMode === "user");
+
+  // Mirror drawings for front camera to match mirrored video
+  if(isFront){
+    ctx.save();
+    ctx.translate(rect.width, 0);
+    ctx.scale(-1, 1);
+  }
+
+  for(const p of persons){
+    const [x,y,w,h] = p.bboxCanvas;
+    const isTarget = target && p === target;
+
+    ctx.strokeStyle = isTarget ? TARGET_BOX_COLOR : OTHER_BOX_COLOR;
+    ctx.lineWidth = isTarget ? 4 : 3;
+    ctx.strokeRect(x,y,w,h);
+
+    ctx.fillStyle = isTarget ? TARGET_BOX_COLOR : OTHER_BOX_COLOR;
+    ctx.font = "16px Arial";
+    ctx.fillText(isTarget ? "TARGET" : "Person", x, y > 18 ? y - 6 : 18);
+  }
+
+  // Aim ring
+  const { x:cx, y:cy } = getCrosshairCssPoint();
+  ctx.beginPath();
+  ctx.arc(cx, cy, 18, 0, Math.PI*2);
+  ctx.strokeStyle = "rgba(255,255,255,0.35)";
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  if(isFront) ctx.restore();
+}
+
+/* =========================
+   Detection loop (throttled)
+========================= */
+async function tick(){
+  resizeCanvasToDisplaySize();
+
+  const now = performance.now();
+  const due = (now - lastDetectTime) >= DETECT_INTERVAL_MS;
+
+  if(model && due && !isDetecting){
+    isDetecting = true;
+    lastDetectTime = now;
+
+    try{
+      const preds = await model.detect(video);
+
+      const persons = preds
+        .filter(p => p.class === "person" && (p.score ?? 0) >= PERSON_SCORE_MIN)
+        .map(p => ({ ...p, bboxCanvas: mapBboxToCanvas(p.bbox) }));
+
+      lastPersons = persons;
+      lastTarget = chooseTarget(persons);
+
+      if(persons.length){
+        statusText.textContent = `Person Detected (${persons.length})`;
+        statusText.className = "detected";
+      }else{
+        statusText.textContent = "Not Found";
+        statusText.className = "notfound";
+        lastTarget = null;
+      }
+    }catch(err){
+      console.error(err);
+      statusText.textContent = "Detection error";
+      statusText.className = "notfound";
+      lastPersons = [];
+      lastTarget = null;
+    }finally{
+      isDetecting = false;
+    }
+  }
+
+  drawScene(lastPersons, lastTarget);
+  requestAnimationFrame(tick);
+}
+
+/* =========================
+   Color check on target region
+   (sample torso-ish area of bbox)
+========================= */
+function getTargetRegionInVideoPixels(target){
+  // target.bboxCanvas is in CSS pixels, but we need VIDEO pixels for sampling
+  const rect = wrapper.getBoundingClientRect();
+  const vw = video.videoWidth || 1;
+  const vh = video.videoHeight || 1;
+
+  const sx = vw / rect.width;
+  const sy = vh / rect.height;
+
+  let [xCss, yCss, wCss, hCss] = target.bboxCanvas;
+
+  // If front camera, overlay is mirrored. Convert CSS bbox back to the *real* video space.
+  // Since video is mirrored visually, a bbox drawn on mirrored view corresponds to flipped x in video.
+  if(facingMode === "user"){
+    xCss = rect.width - (xCss + wCss);
+  }
+
+  // torso region inside bbox
+  const rx0 = xCss + wCss * REGION.x0;
+  const ry0 = yCss + hCss * REGION.y0;
+  const rx1 = xCss + wCss * REGION.x1;
+  const ry1 = yCss + hCss * REGION.y1;
+
+  const x = Math.round(rx0 * sx);
+  const y = Math.round(ry0 * sy);
+  const w = Math.round((rx1 - rx0) * sx);
+  const h = Math.round((ry1 - ry0) * sy);
+
+  // clamp
+  const cx = clamp(x, 0, vw-1);
+  const cy = clamp(y, 0, vh-1);
+  const cw = clamp(w, 1, vw - cx);
+  const ch = clamp(h, 1, vh - cy);
+
+  return { x: cx, y: cy, w: cw, h: ch };
+}
+
+function colorMatchesEnemy(target){
+  // If color mode off, treat as match
+  if(!colorModeToggle.checked) return true;
+  if(!target) return false;
+
+  const { x, y, w, h } = getTargetRegionInVideoPixels(target);
+
+  // Downsample for speed
+  const SAMPLE_W = 96;
+  const SAMPLE_H = 96;
+
+  sampleCanvas.width = SAMPLE_W;
+  sampleCanvas.height = SAMPLE_H;
+
+  // Draw the region from the video into sample canvas
+  sampleCtx.drawImage(video, x, y, w, h, 0, 0, SAMPLE_W, SAMPLE_H);
+
+  const img = sampleCtx.getImageData(0, 0, SAMPLE_W, SAMPLE_H);
+  const data = img.data;
+
+  const enemyRgb = hexToRgb(enemyColorPicker.value);
+  const enemyHsv = rgbToHsv(enemyRgb.r, enemyRgb.g, enemyRgb.b);
+  const targetHue = enemyHsv.h;
+
+  let match = 0;
+  let considered = 0;
+
+  // Iterate pixels (skip some pixels for speed)
+  const step = 2; // 1 = best, 2 = faster
+  for(let yy=0; yy<SAMPLE_H; yy+=step){
+    for(let xx=0; xx<SAMPLE_W; xx+=step){
+      const i = (yy*SAMPLE_W + xx)*4;
+      const r = data[i], g = data[i+1], b = data[i+2];
+      const { h:hh, s, v } = rgbToHsv(r,g,b);
+
+      // ignore gray/dark pixels
+      if(s < SAT_MIN || v < VAL_MIN) continue;
+
+      considered++;
+      if(hueDistance(hh, targetHue) <= HUE_TOL){
+        match++;
+      }
+    }
+  }
+
+  if(considered <= 40) return false; // not enough useful pixels
+  const ratio = match / considered;
+  return ratio >= MATCH_RATIO_MIN;
+}
+
+/* =========================
+   Shoot + score logic (local)
+========================= */
+let hitTimer = null;
+
+function showResult(kind){
+  clearTimeout(hitTimer);
+  hitBadge.classList.remove("hit","miss","blocked");
+
+  if(kind === "hit"){
+    hitBadge.textContent = "HIT";
+    hitBadge.classList.add("hit");
+  }else if(kind === "blocked"){
+    hitBadge.textContent = "WRONG COLOR";
+    hitBadge.classList.add("blocked");
+  }else{
+    hitBadge.textContent = "MISS";
+    hitBadge.classList.add("miss");
+  }
+
+  hitTimer = setTimeout(() => {
+    hitBadge.textContent = "—";
+    hitBadge.classList.remove("hit","miss","blocked");
+  }, 800);
+}
+
+function isCrosshairOnTarget(target){
+  if(!target) return false;
+  const rect = wrapper.getBoundingClientRect();
+  const { x:cx, y:cy } = getCrosshairCssPoint();
+
+  // If front camera, flip point because bboxCanvas is drawn in mirrored overlay
+  // But we also draw overlay mirrored; for hit test we should compare in overlay space.
+  // Here, bboxCanvas is already in overlay-space; crosshair is center so flip doesn't matter,
+  // but keep correctness for future off-center aiming.
+  const px = (facingMode === "user") ? (rect.width - cx) : cx;
+  return pointInBbox(px, cy, target.bboxCanvas);
+}
+
+shootBtn.addEventListener("click", () => {
+  const hitOnPerson = isCrosshairOnTarget(lastTarget);
+
+  if(!hitOnPerson){
+    showResult("miss");
+    return;
+  }
+
+  // Color mode gate
+  const okColor = colorMatchesEnemy(lastTarget);
+
+  if(!okColor){
+    showResult("blocked");
+    return;
+  }
+
+  // Count hit
+  score++;
+  scoreText.textContent = String(score);
+  showResult("hit");
+});
+
+/* =========================
+   Camera switch
+========================= */
+switchBtn.onclick = async () => {
+  facingMode = (facingMode === "environment") ? "user" : "environment";
+  await setupCamera();
+};
+
+/* =========================
+   Color presets
+========================= */
+presetRed.onclick = () => enemyColorPicker.value = "#ff0000";
+presetGreen.onclick = () => enemyColorPicker.value = "#00ff00";
+
+/* =========================
+   Init
+========================= */
+async function init(){
+  statusText.textContent = "Starting camera…";
+  statusText.className = "loading";
+
+  await setupCamera();
+
+  statusText.textContent = "Loading model…";
+  statusText.className = "loading";
+
+  model = await cocoSsd.load();
+
+  statusText.textContent = "Ready";
+  statusText.className = "detected";
+
+  requestAnimationFrame(tick);
+}
+
+init();
+</script>
+
+</body>
+</html>
