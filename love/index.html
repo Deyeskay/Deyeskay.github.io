@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Valentine ❤️</title>
+
+<style>
+body{
+  margin:0;
+  font-family:'Segoe UI',sans-serif;
+  background:linear-gradient(135deg,#ff6a88,#ff99ac);
+  overflow-x:hidden;
+  color:white;
+  text-align:center;
+}
+
+/* ---------------- HEART RAIN ---------------- */
+
+#heartRain{
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  z-index:0;
+}
+
+.floatingHeart{
+  position:absolute;
+  animation:fall linear forwards;
+  opacity:.7;
+}
+
+@keyframes fall{
+  from{transform:translateY(-10vh)}
+  to{transform:translateY(110vh);opacity:0}
+}
+
+/* ---------------- YES TRAIL ---------------- */
+
+.trailHeart{
+  position:fixed;
+  font-size:18px;
+  pointer-events:none;
+  animation:trail 1s forwards;
+}
+
+@keyframes trail{
+  to{
+    transform:translateY(-60px);
+    opacity:0;
+  }
+}
+
+/* ---------------- LANDING ---------------- */
+
+.container{
+  height:100vh;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  position:relative;
+  z-index:2;
+}
+
+/* Title animates with transform (no layout snap) */
+h1{
+  font-size:24px;
+  margin:0;
+  min-height:40px;
+  transform:translateY(0);
+  transition:transform 700ms ease;
+}
+h1.lift{
+  transform:translateY(-55px);
+}
+
+/* Buttons are absolute overlay (won't push title) */
+.buttonRow{
+  position:absolute;
+  top:calc(50% + 45px);
+  display:flex;
+  gap:25px;
+  opacity:0;
+  pointer-events:none;
+}
+
+.buttonRow.show{
+  opacity:1;
+  pointer-events:auto;
+}
+
+/* Buttons */
+button{
+  padding:14px 30px;
+  border:none;
+  border-radius:30px;
+  font-size:18px;
+  cursor:pointer;
+}
+
+#yesBtn{
+  background:white;
+  color:#ff4b6e;
+
+  /* Smooth run-away movement */
+  transition: left 520ms cubic-bezier(.2,.9,.2,1),
+              top  520ms cubic-bezier(.2,.9,.2,1),
+              transform 520ms cubic-bezier(.2,.9,.2,1),
+              box-shadow 520ms cubic-bezier(.2,.9,.2,1);
+  will-change:left, top, transform;
+}
+
+#noBtn{
+  background:#222;
+  color:white;
+}
+
+/* Slide-in animations after typewriter */
+#yesBtn, #noBtn{
+  opacity:0;
+  transform:translateX(0);
+}
+
+#btnRow.show #yesBtn{
+  animation:slideInLeft 700ms cubic-bezier(.2,.9,.2,1) forwards;
+}
+
+#btnRow.show #noBtn{
+  animation:slideInRight 700ms cubic-bezier(.2,.9,.2,1) forwards;
+}
+
+@keyframes slideInLeft{
+  from{ transform:translateX(-60vw); opacity:0; }
+  to{ transform:translateX(0); opacity:1; }
+}
+@keyframes slideInRight{
+  from{ transform:translateX(60vw); opacity:0; }
+  to{ transform:translateX(0); opacity:1; }
+}
+
+/* Final big yes button */
+#yesBtn.finalYes{
+  transform:scale(1.25);
+  box-shadow:0 0 30px 12px rgba(255,255,255,.95);
+}
+
+/* wiggle */
+@keyframes wiggle{
+  0%   { transform:translateX(0) rotate(0deg); }
+  25%  { transform:translateX(0) rotate(6deg); }
+  50%  { transform:translateX(0) rotate(-6deg); }
+  75%  { transform:translateX(0) rotate(6deg); }
+  100% { transform:translateX(0) rotate(0deg); }
+}
+.wiggle{ animation:wiggle .4s; }
+
+.glow{
+  box-shadow:0 0 25px 10px rgba(255,255,255,.9);
+}
+
+/* ---------------- SECTIONS ---------------- */
+
+.section{
+  height:100vh;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+}
+
+.photo{
+  width:80%;
+  max-width:320px;
+  border-radius:20px;
+  opacity:0;
+  transform:scale(.6);
+  transition:1s;
+}
+
+.photo.show{
+  opacity:1;
+  transform:scale(1);
+}
+
+.message{
+  margin-top:14px;
+  opacity:0;
+  font-size:18px;
+  transition:1s;
+}
+
+.message.show{opacity:1}
+
+.helper{
+  font-size:14px;
+  margin-bottom:6px;
+  opacity:.9;
+  animation:bounce 1s infinite alternate;
+}
+
+@keyframes bounce{
+  from{transform:translateY(0)}
+  to{transform:translateY(-6px)}
+}
+
+.heart{
+  font-size:42px;
+  cursor:pointer;
+  display:none;
+  animation:pulse 1s infinite alternate;
+}
+
+@keyframes pulse{
+  from{transform:scale(1)}
+  to{transform:scale(1.2)}
+}
+
+canvas{
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  z-index:1;
+}
+</style>
+</head>
+
+<body>
+
+<div id="heartRain"></div>
+<canvas id="fx"></canvas>
+
+<audio id="bgm" src="music.mp3" loop></audio>
+<audio id="fireSound" src="firework.mp3"></audio>
+<audio id="confettiSound" src="confetti.mp3"></audio>
+
+<div class="container">
+  <h1 id="title"></h1>
+
+  <div class="buttonRow" id="btnRow">
+    <button id="yesBtn">Yes 💕</button>
+    <button id="noBtn">No 😢</button>
+  </div>
+</div>
+
+<div id="sections"></div>
+
+<script>
+/* ---------------- HELPERS ---------------- */
+
+const heartRain = document.getElementById("heartRain");
+const title = document.getElementById("title");
+const btnRow = document.getElementById("btnRow");
+const yesBtn = document.getElementById("yesBtn");
+const noBtn  = document.getElementById("noBtn");
+
+const bgm = document.getElementById("bgm");
+const fireSound = document.getElementById("fireSound");
+const confettiSound = document.getElementById("confettiSound");
+
+function typeText(el, text, speed=40, done){
+  el.innerHTML = "";
+  let k = 0;
+  (function tick(){
+    if(k < text.length){
+      el.innerHTML += text.charAt(k++);
+      setTimeout(tick, speed);
+    }else{
+      if(done) done();
+    }
+  })();
+}
+
+function waitForTransitionEnd(el, propName){
+  return new Promise(resolve => {
+    const handler = (e) => {
+      if (!propName || e.propertyName === propName){
+        el.removeEventListener("transitionend", handler);
+        resolve();
+      }
+    };
+    el.addEventListener("transitionend", handler, { once: true });
+  });
+}
+
+function waitForAnimationEnd(el){
+  return new Promise(resolve => {
+    const handler = () => {
+      el.removeEventListener("animationend", handler);
+      resolve();
+    };
+    el.addEventListener("animationend", handler, { once: true });
+  });
+}
+
+/* ---------------- INITIAL TYPEWRITER ---------------- */
+
+const firstText = "Junnu, will you be my Valentine? ❤️";
+
+typeText(title, firstText, 45, async () => {
+  // Start the title lift
+  title.classList.add("lift");
+
+  // Wait until the title actually finished moving up (700ms)
+  await waitForTransitionEnd(title, "transform");
+
+  // Now show buttons (this starts their slide-in animations)
+  btnRow.classList.add("show");
+
+  // Wait until YES slide-in animation finishes (700ms)
+  await waitForAnimationEnd(yesBtn);
+
+  // ✅ Now YES is truly in its centered final position
+  captureYesInitialPosition();
+});
+
+
+/* ---------------- HEART RAIN ---------------- */
+
+setInterval(()=>{
+  const h=document.createElement("div");
+  h.className="floatingHeart";
+  h.innerText="💖";
+  h.style.left=Math.random()*100+"vw";
+  h.style.fontSize=(14+Math.random()*26)+"px";
+  h.style.animationDuration=(4+Math.random()*4)+"s";
+  heartRain.appendChild(h);
+  setTimeout(()=>h.remove(),8000);
+},300);
+
+/* ---------------- YES HEART TRAIL ---------------- */
+
+function trail(x,y){
+  for(let j=0;j<6;j++){
+    const t=document.createElement("div");
+    t.className="trailHeart";
+    t.innerText="💗";
+    t.style.left=x+"px";
+    t.style.top=y+"px";
+    document.body.appendChild(t);
+    setTimeout(()=>t.remove(),1000);
+  }
+}
+
+/* ---------------- MUSIC ---------------- */
+
+document.body.addEventListener("click",()=>bgm.play(),{once:true});
+
+/* ---------------- FIREWORK/CONFETTI ---------------- */
+
+const canvas=document.getElementById("fx");
+const ctx=canvas.getContext("2d");
+
+function resizeCanvas(){
+  canvas.width=innerWidth;
+  canvas.height=innerHeight;
+}
+resizeCanvas();
+addEventListener("resize", resizeCanvas);
+
+let particles=[];
+
+function animate(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  for(let i=particles.length-1;i>=0;i--){
+    const p=particles[i];
+    p.x+=p.dx; p.y+=p.dy; p.life--;
+    ctx.fillStyle=p.color;
+    ctx.fillRect(p.x,p.y,4,4);
+    if(p.life<=0) particles.splice(i,1);
+  }
+  requestAnimationFrame(animate);
+}
+animate();
+
+function fireworks(){
+  fireSound.currentTime = 0;
+  fireSound.play();
+  for(let i=0;i<80;i++){
+    particles.push({
+      x:canvas.width/2, y:canvas.height/2,
+      dx:(Math.random()-0.5)*7,
+      dy:(Math.random()-0.5)*7,
+      life:70,
+      color:"white"
+    });
+  }
+}
+
+function confetti(){
+  confettiSound.currentTime = 0;
+  confettiSound.play();
+  const colors=["#ff0","#0ff","#f0f","#fff","#0f0"];
+  for(let i=0;i<100;i++){
+    particles.push({
+      x:Math.random()*canvas.width,
+      y:-10,
+      dx:(Math.random()-0.5)*2,
+      dy:Math.random()*5+2,
+      life:100,
+      color:colors[Math.floor(Math.random()*colors.length)]
+    });
+  }
+}
+
+/* ---------------- BUTTON LOGIC ---------------- */
+
+let yesCount=0;
+let noCount=0;
+
+const yesTexts=[
+"Are you sure? 😄",
+"Think again 😜",
+"Catch me first 💕",
+"Almost there 😆",
+"Okay okay you win ❤️"
+];
+
+const noTexts=[
+"Not sure? 😄",
+"Think again 😅",
+"Are you serious? 🤨",
+"Still no? 🥺",
+"Too late… you’re already my Valentine 😉❤️"
+];
+
+/* ---- Deterministic YES positions ---- */
+const SAFE_MARGIN = 18; // distance from screen edges
+let yesInitial = null;
+let noInitial  = null;
+
+function captureYesInitialPosition(){
+  // Capture where the YES button naturally sits (before we start moving it)
+  const rect = yesBtn.getBoundingClientRect();
+  yesBtn.style.position = "fixed";
+  yesBtn.style.left = rect.left + "px";
+  yesBtn.style.top  = rect.top  + "px";
+  yesInitial = { left: rect.left, top: rect.top };
+
+  // Capture NO natural position
+  const n = noBtn.getBoundingClientRect();
+  const NO_SHIFT = 72;
+
+  noBtn.style.position = "fixed";
+  noBtn.style.left = (n.left + NO_SHIFT) + "px";
+  noBtn.style.top  = n.top  + "px";
+
+  noInitial = { left: n.left + NO_SHIFT, top: n.top };
+}
+
+function getCornerPosition(corner){
+  const w = yesBtn.offsetWidth;
+  const h = yesBtn.offsetHeight;
+
+  switch(corner){
+    case "TL": return { left: SAFE_MARGIN, top: SAFE_MARGIN };
+    case "TR": return { left: innerWidth - w - SAFE_MARGIN, top: SAFE_MARGIN };
+    case "BL": return { left: SAFE_MARGIN, top: innerHeight - h - SAFE_MARGIN };
+    case "BR": return { left: innerWidth - w - SAFE_MARGIN, top: innerHeight - h - SAFE_MARGIN };
+  }
+  return { left: SAFE_MARGIN, top: SAFE_MARGIN };
+}
+
+function moveYesTo(left, top){
+  const rect = yesBtn.getBoundingClientRect();
+  trail(rect.left + rect.width/2, rect.top + rect.height/2);
+  requestAnimationFrame(() => {
+    yesBtn.style.left = left + "px";
+    yesBtn.style.top  = top + "px";
+  });
+}
+
+// Order required:
+// 1: TL, 2: BR, 3: TR, 4: BL, 5: initial + bigger glow
+const yesPath = ["TL","BR","TR","BL"];
+
+yesBtn.onclick = () => {
+  yesCount++;
+
+  // Keep typing effect for the title
+  if(yesCount <= 5){
+    typeText(title, yesTexts[Math.min(yesCount-1, yesTexts.length-1)], 35);
+  }
+
+  // Ensure we captured initial position (just in case)
+  if(!yesInitial) captureYesInitialPosition();
+
+  if(yesCount >= 1 && yesCount <= 4){
+    // Remove final state if user clicks before reaching 5 (safety)
+    yesBtn.classList.remove("finalYes");
+
+    const corner = yesPath[yesCount-1];
+    const pos = getCornerPosition(corner);
+    moveYesTo(pos.left, pos.top);
+  }else if(yesCount === 5){
+    // Return to initial position, then enlarge + glow
+    moveYesTo(yesInitial.left, yesInitial.top);
+
+    // apply final grow/glow after it reaches near initial
+    setTimeout(() => {
+      yesBtn.classList.add("finalYes");
+      fireworks();
+      setTimeout(startJourney, 2000);
+    }, 560);
+  }
+};
+
+noBtn.onclick = () => {
+  if(noCount < 4){
+    typeText(title, noTexts[noCount], 35);
+    noBtn.classList.add("wiggle");
+    setTimeout(()=>noBtn.classList.remove("wiggle"),400);
+    yesBtn.classList.add("glow");
+    noCount++;
+  } else {
+    typeText(title, noTexts[4], 35);
+    confetti();
+    noBtn.style.display="none";
+    setTimeout(startJourney,2250);
+  }
+};
+
+/* ---------------- START JOURNEY ---------------- */
+
+function startJourney(){
+  document.querySelector(".container").style.display="none";
+  showSections();
+}
+
+/* ---------------- PHOTO JOURNEY ---------------- */
+
+const texts=[
+"I’ll be there for you, wherever life takes you 🌍❤️",
+"The vibe we share is rare, real, and unmatched ✨",
+"Our thoughts align, our souls connect — we’re destined as one ♾️",
+"Every promise we made, I’ll honor for a lifetime 🤞💍",
+"This bond we share is my greatest treasure 💎",
+"Every moment with you is magic ✨", 
+"You are my favorite person 🥰", 
+"My forever starts with you 💍"
+];
+
+function showSections(){
+  const container=document.getElementById("sections");
+  container.innerHTML = "";
+
+  const hearts=[];
+
+  for(let i=0;i<8;i++){
+    const sec=document.createElement("div");
+    sec.className="section";
+
+    const helper=document.createElement("div");
+    helper.className="helper";
+    helper.innerText="Tap to reveal 💖";
+
+    const img=document.createElement("img");
+    img.src=`photo${i+1}.jpg`;
+    img.className="photo";
+
+    const msg=document.createElement("div");
+    msg.className="message";
+    msg.innerText=texts[i];
+
+    const heart=document.createElement("div");
+    heart.className="heart";
+    heart.innerHTML="💖";
+
+    hearts.push(heart);
+
+    heart.onclick=()=>{
+      helper.style.display="none";
+      heart.style.display="none";
+
+      if(i%2===0) fireworks();
+      else confetti();
+
+      img.classList.add("show");
+      msg.classList.add("show");
+	  typeText(msg, texts[i], 30);   // 👈 typewriter caption
+
+
+      setTimeout(()=>{
+        if(i+1<hearts.length){
+          hearts[i+1].style.display="block";
+          const nextHelper = hearts[i+1].parentElement.querySelector(".helper");
+          nextHelper.style.display="block";
+          hearts[i+1].parentElement.scrollIntoView({behavior:"smooth"});
+        }
+      },4000);
+    };
+
+    sec.append(helper,img,msg,heart);
+    container.appendChild(sec);
+  }
+
+  hearts[0].style.display="block";
+  hearts[0].parentElement.querySelector(".helper").style.display="block";
+}
+</script>
+</body>
+</html>
