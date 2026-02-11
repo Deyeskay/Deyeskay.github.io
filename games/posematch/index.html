@@ -1,0 +1,1114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <title>Pose Match Game</title>
+
+  <!-- MediaPipe Pose + Drawing Utils -->
+  <!-- (Pinning versions helps stability across devices/CDNs) -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5/pose.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils@0.3/drawing_utils.js"></script>
+
+  <style>
+    :root{
+      --bg:#0b0f14;
+      --panel:rgba(15, 20, 28, 0.72);
+      --panel2:rgba(15, 20, 28, 0.88);
+      --text:#e9eef6;
+      --muted:#a9b4c4;
+      --good:#22c55e;
+      --bad:#ef4444;
+      --warn:#f59e0b;
+      --border:rgba(255,255,255,0.12);
+      --shadow:0 10px 30px rgba(0,0,0,0.35);
+      --radius:16px;
+    }
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
+    body{
+      margin:0;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      background:
+        radial-gradient(1200px 800px at 50% -10%, rgba(88,215,255,0.20), transparent 60%),
+        radial-gradient(900px 700px at 110% 30%, rgba(34,197,94,0.10), transparent 55%),
+        radial-gradient(900px 700px at -10% 60%, rgba(239,68,68,0.10), transparent 55%),
+        var(--bg);
+      color:var(--text);
+      overflow:hidden;
+    }
+    .screen{
+      position:fixed; inset:0;
+      display:none; align-items:center; justify-content:center;
+      padding:16px;
+    }
+    .screen.active{ display:flex; }
+
+    .start-card{
+      width:min(520px, 92vw);
+      padding:22px;
+      border:1px solid var(--border);
+      background:linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      position:relative;
+    }
+    .topbar{
+      position:absolute; top:12px; right:12px;
+      display:flex; gap:10px; align-items:center;
+    }
+    .icon-btn{
+      width:40px;height:40px;border-radius:12px;
+      border:1px solid var(--border);
+      background:rgba(255,255,255,0.06);
+      color:var(--text);
+      display:flex;align-items:center;justify-content:center;
+      cursor:pointer;
+      box-shadow:0 6px 16px rgba(0,0,0,0.25);
+      -webkit-tap-highlight-color: transparent;
+    }
+    .icon-btn:active{ transform:scale(0.98); }
+    .title{
+      font-size:28px;font-weight:800;margin:18px 0 6px;text-align:center;
+    }
+    .subtitle{
+      text-align:center;margin:0 0 18px;color:var(--muted);
+      line-height:1.35;font-size:14px;
+    }
+    .primary-btn{
+      width:100%;height:52px;border-radius:14px;
+      border:1px solid rgba(88,215,255,0.35);
+      background:linear-gradient(180deg, rgba(88,215,255,0.25), rgba(88,215,255,0.12));
+      color:var(--text);font-weight:800;font-size:16px;
+      cursor:pointer;
+      box-shadow:0 10px 20px rgba(0,0,0,0.28);
+      -webkit-tap-highlight-color: transparent;
+    }
+    .primary-btn:active{ transform:scale(0.99); }
+    .note{
+      margin-top:12px;color:var(--muted);font-size:12px;line-height:1.35;text-align:center;
+    }
+
+    #gameScreen{ align-items:stretch; justify-content:stretch; padding:0; }
+    .game-wrap{ position:relative; width:100%; height:100%; overflow:hidden; background:#000; }
+    video, canvas{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+
+    .hud{ position:absolute; inset:0; pointer-events:none; }
+    .hud .pill{
+      pointer-events:auto;
+      display:inline-flex;align-items:center;gap:8px;
+      padding:10px 12px;border-radius:999px;
+      border:1px solid var(--border);
+      background:var(--panel);
+      backdrop-filter: blur(8px);
+      box-shadow:0 10px 24px rgba(0,0,0,0.25);
+      font-weight:700;font-size:13px;color:var(--text);
+      -webkit-tap-highlight-color: transparent;
+      user-select:none;
+    }
+    .hud-top-left{
+      position:absolute;top:12px;left:12px;
+      display:flex;flex-direction:column;gap:10px;
+      max-width:min(60vw, 360px);
+    }
+    .hud-top-right{
+      position:absolute;top:12px;right:12px;
+      display:flex;flex-direction:column;gap:10px;align-items:flex-end;
+      max-width:min(70vw, 420px);
+    }
+    .pose-card{
+      pointer-events:auto;
+      width:min(320px, 72vw);
+      border-radius:16px;
+      border:1px solid var(--border);
+      background:var(--panel2);
+      backdrop-filter: blur(10px);
+      box-shadow:var(--shadow);
+      padding:12px;
+    }
+    .pose-title{
+      font-weight:900;margin:0 0 6px;font-size:14px;
+      display:flex;align-items:center;justify-content:space-between;gap:10px;
+    }
+    .pose-desc{ margin:0;color:var(--muted);font-size:12px;line-height:1.35; }
+    .match-row{ margin-top:10px;display:flex;gap:10px;align-items:center;justify-content:space-between; }
+    .bar{
+      flex:1;height:10px;border-radius:999px;background:rgba(255,255,255,0.10);
+      overflow:hidden;border:1px solid rgba(255,255,255,0.08);
+    }
+    .bar > div{
+      height:100%;width:0%;
+      background:linear-gradient(90deg, rgba(88,215,255,0.85), rgba(34,197,94,0.85));
+      border-radius:999px;transition:width 120ms linear;
+    }
+    .match-pct{ min-width:56px;text-align:right;font-weight:900;font-size:13px; }
+
+    .hud-bottom{
+      position:absolute;left:0;right:0;bottom:16px;
+      display:flex;justify-content:center;pointer-events:none;
+    }
+    .bottom-controls{
+      pointer-events:auto;
+      display:flex;gap:10px;align-items:center;
+      width:min(560px, 94vw);
+      padding:10px;border-radius:18px;
+      border:1px solid var(--border);
+      background:var(--panel);
+      backdrop-filter: blur(10px);
+      box-shadow:var(--shadow);
+    }
+    .danger-btn, .secondary-btn{
+      height:46px;border-radius:14px;border:1px solid var(--border);
+      background:rgba(255,255,255,0.06);color:var(--text);
+      font-weight:900;cursor:pointer;flex:1;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .danger-btn{
+      border-color: rgba(239,68,68,0.35);
+      background: linear-gradient(180deg, rgb(23 48 53), rgb(0 0 0));
+    }
+    .danger-btn:active, .secondary-btn:active{ transform:scale(0.99); }
+
+    .modal-backdrop{
+      position:fixed;inset:0;background:rgba(0,0,0,0.55);
+      display:none;align-items:center;justify-content:center;
+      padding:16px;z-index:50;
+    }
+    .modal-backdrop.show{ display:flex; }
+    .modal{
+      width:min(720px, 95vw);max-height:85vh;overflow:auto;
+      border-radius:18px;border:1px solid var(--border);
+      background:linear-gradient(180deg, rgb(11 20 22), rgb(9 19 21));
+      box-shadow:var(--shadow);
+      padding:14px;
+    }
+    .modal-head{ display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px; }
+    .modal-title{ font-weight:900;font-size:16px;margin:0; }
+    .close-btn{
+      width:40px;height:40px;border-radius:12px;border:1px solid var(--border);
+      background:rgba(255,255,255,0.06);color:var(--text);cursor:pointer;
+    }
+    .grid{ display:grid;grid-template-columns:1fr 1fr;gap:12px; }
+    @media (max-width:640px){ .grid{ grid-template-columns:1fr; } }
+    .field{
+      border:1px solid var(--border);
+      background:rgba(0,0,0,0.20);
+      border-radius:16px;padding:12px;
+    }
+    .field label{ display:block;font-size:12px;color:var(--muted);margin-bottom:6px;font-weight:700; }
+    .field input, .field select{
+      width:100%;height:44px;border-radius:12px;
+      border:1px solid rgba(255,255,255,0.14);
+      background:rgba(255,255,255,0.06);
+      color:var(--text);padding:0 12px;font-weight:800;outline:none;
+    }
+    .field .hint{ font-size:12px;color:var(--muted);margin-top:8px;line-height:1.3; }
+    .row-actions{ display:flex;gap:10px;margin-top:12px; }
+    .save-btn{
+      flex:1;height:48px;border-radius:14px;
+      border:1px solid rgba(34,197,94,0.35);
+      background:linear-gradient(180deg, rgba(34,197,94,0.24), rgba(34,197,94,0.10));
+      color:var(--text);font-weight:900;cursor:pointer;
+    }
+    .reset-btn{
+      flex:1;height:48px;border-radius:14px;
+      border:1px solid rgba(255,255,255,0.16);
+      background:rgba(255,255,255,0.06);
+      color:var(--text);font-weight:900;cursor:pointer;
+    }
+
+    .toast{
+      position:fixed;left:50%;transform:translateX(-50%);
+      bottom:86px;
+      background:rgba(10, 14, 20, 0.86);
+      border:1px solid var(--border);
+      color:var(--text);
+      padding:10px 12px;border-radius:14px;
+      box-shadow:var(--shadow);
+      display:none;z-index:60;
+      max-width:min(92vw, 520px);
+      line-height:1.25;font-weight:800;font-size:13px;
+    }
+    .toast.show{ display:block; }
+    .toast.good{ border-color: rgba(34,197,94,0.30); }
+    .toast.bad{ border-color: rgba(239,68,68,0.30); }
+    .toast.warn{ border-color: rgba(245,158,11,0.35); }
+
+    .end-card{
+      width:min(520px, 92vw);
+      padding:18px;
+      border:1px solid var(--border);
+      background:linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+    }
+    .score-big{ font-size:42px;font-weight:1000;margin:8px 0 0;text-align:center; }
+    .end-meta{ margin:10px 0 0;color:var(--muted);text-align:center;font-weight:700;font-size:13px;line-height:1.35; }
+    .end-actions{ margin-top:14px;display:flex;gap:10px; }
+    .end-actions button{
+      flex:1;height:48px;border-radius:14px;font-weight:900;
+      border:1px solid var(--border);
+      background:rgba(255,255,255,0.06);
+      color:var(--text);
+      cursor:pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .end-actions button.primary{
+      border-color: rgba(88,215,255,0.35);
+      background: linear-gradient(180deg, rgba(88,215,255,0.22), rgba(88,215,255,0.10));
+    }
+    .mono{ font-variant-numeric: tabular-nums; }
+  </style>
+</head>
+
+<body>
+  <!-- START SCREEN -->
+  <section id="startScreen" class="screen active">
+    <div class="start-card">
+      <div class="topbar">
+        <button class="icon-btn" id="openSettingsBtn" aria-label="Settings" title="Settings">⚙️</button>
+      </div>
+      <h1 class="title">Pose Match</h1>
+      <p class="subtitle">
+        Show a random pose to the player. If match ≥ <b>75%</b>, score increases and next pose appears.
+      </p>
+      <button class="primary-btn" id="startBtn">Start Game</button>
+      <div class="note">Tip: Use good lighting and show full upper-body for better detection.</div>
+    </div>
+  </section>
+
+  <!-- GAME SCREEN -->
+  <section id="gameScreen" class="screen">
+    <div class="game-wrap">
+      <video id="video" playsinline muted></video>
+      <canvas id="overlay"></canvas>
+
+      <div class="hud">
+        <div class="hud-top-left">
+          <div class="pill">⏱️ Total: <span class="mono" id="totalTimeLbl">02:00</span></div>
+          <div class="pill" id="intervalPill" style="display:none;">
+            ⏳ Pose time: <span class="mono" id="intervalTimeLbl">00:15</span>
+            <span id="bankLbl" style="color:var(--muted); font-weight:900;"></span>
+          </div>
+          <div class="pill">🧮 Score: <span class="mono" id="scoreLbl">0</span></div>
+        </div>
+
+        <div class="hud-top-right">
+          <div class="pose-card">
+            <div class="pose-title">
+              <span>📌 Pose: <span id="poseName">—</span></span>
+              <span id="modeBadge" style="font-weight:900; color:var(--muted); font-size:12px;">MODE</span>
+            </div>
+            <p class="pose-desc" id="poseDesc">—</p>
+
+            <div class="match-row">
+              <div class="bar"><div id="matchBar"></div></div>
+              <div class="match-pct mono" id="matchPct">0%</div>
+            </div>
+
+            <p class="pose-desc" style="margin-top:10px;">
+              Match threshold: <b class="mono" id="thresholdLbl">75%</b>
+            </p>
+          </div>
+        </div>
+
+        <div class="hud-bottom">
+          <div class="bottom-controls">
+            <button class="secondary-btn" id="endBtn">End</button>
+            <button class="danger-btn" id="skipBtn">Skip Pose</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- END SCREEN -->
+  <section id="endScreen" class="screen">
+    <div class="end-card">
+      <h2 class="title" style="margin:6px 0 0; font-size:22px;">Game Over</h2>
+      <div class="score-big mono" id="finalScore">0</div>
+      <div class="end-meta" id="finalMeta"></div>
+      <div class="end-actions">
+        <button id="playAgainBtn" class="primary">Play Again</button>
+        <button id="backHomeBtn">Home</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- SETTINGS MODAL -->
+  <div id="settingsBackdrop" class="modal-backdrop" role="dialog" aria-modal="true" aria-label="Game Preferences">
+    <div class="modal">
+      <div class="modal-head">
+        <h3 class="modal-title">Game Preferences</h3>
+        <button class="close-btn" id="closeSettingsBtn" aria-label="Close">✕</button>
+      </div>
+
+      <div class="grid">
+        <div class="field">
+          <label for="modeSelect">Game Mode</label>
+          <select id="modeSelect">
+            <option value="score">Score Mode (interval + total time + bonus)</option>
+            <option value="time">Time Mode (no interval, skip costs time)</option>
+          </select>
+          <div class="hint">
+            <b>Score Mode:</b> You get a time window per pose (interval). If you match early, leftover time stacks to next pose. Auto-skip on timeout (no deduction). Bonus points for saved time at end.<br><br>
+            <b>Time Mode:</b> No per-pose timer. You can skip anytime, but skipping deducts <b>10s</b> (configurable) from total time.
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="totalTimeInput">Total Game Time (seconds)</label>
+          <input id="totalTimeInput" type="number" min="15" step="1" value="120" />
+          <div class="hint">Example: 120 = 2 minutes</div>
+        </div>
+
+        <div class="field" id="intervalField">
+          <label for="intervalInput">Pose Interval (seconds) — Score Mode</label>
+          <input id="intervalInput" type="number" min="5" step="1" value="15" />
+          <div class="hint">Player must match pose within this time (plus stacked leftover).</div>
+        </div>
+
+        <div class="field">
+          <label for="successScoreInput">Score on Success</label>
+          <input id="successScoreInput" type="number" min="1" step="1" value="10" />
+        </div>
+
+        <div class="field">
+          <label for="skipScoreInput">Score Penalty on Manual Skip</label>
+          <input id="skipScoreInput" type="number" min="0" step="1" value="3" />
+          <div class="hint">Auto-skip (Score Mode timeout) does <b>not</b> deduct score.</div>
+        </div>
+
+        <div class="field" id="timeSkipField">
+          <label for="timeSkipPenaltyInput">Time Penalty on Skip — Time Mode (seconds)</label>
+          <input id="timeSkipPenaltyInput" type="number" min="0" step="1" value="10" />
+        </div>
+
+        <div class="field" id="bonusField">
+          <label for="bonusPerSecondInput">Bonus Points per Saved Second — Score Mode</label>
+          <input id="bonusPerSecondInput" type="number" min="0" step="1" value="1" />
+        </div>
+		
+		<div class="field">
+		  <label for="matchThresholdInput">Match Threshold (%)</label>
+		  <input id="matchThresholdInput" type="number" min="50" max="95" step="1" value="75" />
+		  <div class="hint">Lower = easier. Higher = stricter.</div>
+		</div>
+
+
+        <div class="field">
+          <label for="minVisInput">Min Landmark Confidence (0.0 - 1.0)</label>
+          <input id="minVisInput" type="number" min="0" max="1" step="0.05" value="0.55" />
+        </div>
+      </div>
+
+      <div class="row-actions">
+        <button class="save-btn" id="saveSettingsBtn">Save</button>
+        <button class="reset-btn" id="resetSettingsBtn">Reset Defaults</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script>
+    /***********************
+     *  UTIL
+     ***********************/
+    const $ = (id) => document.getElementById(id);
+    function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+    function fmtTime(sec){
+      sec = Math.max(0, Math.floor(sec));
+      const m = Math.floor(sec/60);
+      const s = sec % 60;
+      return String(m).padStart(2,'0') + ":" + String(s).padStart(2,'0');
+    }
+    function showToast(msg, type="warn", ms=1800){
+      const t = $("toast");
+      t.className = `toast show ${type}`;
+      t.textContent = msg;
+      clearTimeout(showToast._tmr);
+      showToast._tmr = setTimeout(()=> t.classList.remove("show"), ms);
+    }
+    function setScreen(id){
+      $("startScreen").classList.remove("active");
+      $("gameScreen").classList.remove("active");
+      $("endScreen").classList.remove("active");
+      $(id).classList.add("active");
+    }
+
+    /***********************
+     *  Sounds
+     ***********************/
+    let audioCtx = null;
+    function beep(type="success"){
+      try{
+        if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const ctx = audioCtx;
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.connect(g); g.connect(ctx.destination);
+        const now = ctx.currentTime;
+
+        if(type==="success"){
+          o.type="sine"; o.frequency.setValueAtTime(880, now);
+          g.gain.setValueAtTime(0.001, now);
+          g.gain.exponentialRampToValueAtTime(0.20, now+0.01);
+          g.gain.exponentialRampToValueAtTime(0.001, now+0.18);
+          o.start(now); o.stop(now+0.2);
+        }else{
+          o.type="square"; o.frequency.setValueAtTime(220, now);
+          g.gain.setValueAtTime(0.001, now);
+          g.gain.exponentialRampToValueAtTime(0.14, now+0.01);
+          g.gain.exponentialRampToValueAtTime(0.001, now+0.14);
+          o.start(now); o.stop(now+0.16);
+        }
+      }catch(e){}
+    }
+
+    /***********************
+     *  SETTINGS
+     ***********************/
+    const DEFAULTS = {
+      mode: "score",
+      totalTimeSec: 120,
+      intervalSec: 15,
+      successScore: 10,
+      skipPenaltyScore: 3,
+      timeSkipPenaltySec: 10,
+      bonusPerSavedSecond: 1,
+      minVis: 0.55,
+	  matchThreshold: 0.75
+    };
+    let settings = loadSettings();
+
+    function loadSettings(){
+      try{
+        const raw = localStorage.getItem("pose_game_settings");
+        if(!raw) return {...DEFAULTS};
+        const s = JSON.parse(raw);
+        return {
+          ...DEFAULTS,
+          ...s,
+          totalTimeSec: Number(s.totalTimeSec ?? DEFAULTS.totalTimeSec),
+          intervalSec: Number(s.intervalSec ?? DEFAULTS.intervalSec),
+          successScore: Number(s.successScore ?? DEFAULTS.successScore),
+          skipPenaltyScore: Number(s.skipPenaltyScore ?? DEFAULTS.skipPenaltyScore),
+          timeSkipPenaltySec: Number(s.timeSkipPenaltySec ?? DEFAULTS.timeSkipPenaltySec),
+          bonusPerSavedSecond: Number(s.bonusPerSavedSecond ?? DEFAULTS.bonusPerSavedSecond),
+          minVis: Number(s.minVis ?? DEFAULTS.minVis),
+        };
+      }catch{
+        return {...DEFAULTS};
+      }
+    }
+    function saveSettings(){
+      localStorage.setItem("pose_game_settings", JSON.stringify(settings));
+    }
+    function syncSettingsUI(){
+      $("modeSelect").value = settings.mode;
+      $("totalTimeInput").value = settings.totalTimeSec;
+      $("intervalInput").value = settings.intervalSec;
+      $("successScoreInput").value = settings.successScore;
+      $("skipScoreInput").value = settings.skipPenaltyScore;
+      $("timeSkipPenaltyInput").value = settings.timeSkipPenaltySec;
+      $("bonusPerSecondInput").value = settings.bonusPerSavedSecond;
+      $("minVisInput").value = settings.minVis;
+	  $("matchThresholdInput").value = Math.round(settings.matchThreshold * 100);
+
+
+      const scoreMode = settings.mode === "score";
+      $("intervalField").style.display = scoreMode ? "" : "none";
+      $("bonusField").style.display = scoreMode ? "" : "none";
+      $("timeSkipField").style.display = scoreMode ? "none" : "";
+	  
+	  updateThresholdUI();
+    }
+    function readSettingsUI(){
+      const mode = $("modeSelect").value;
+      const totalTimeSec = clamp(Number($("totalTimeInput").value || 120), 15, 3600);
+      const intervalSec = clamp(Number($("intervalInput").value || 15), 5, 3600);
+      const successScore = clamp(Number($("successScoreInput").value || 10), 1, 99999);
+      const skipPenaltyScore = clamp(Number($("skipScoreInput").value || 0), 0, 99999);
+      const timeSkipPenaltySec = clamp(Number($("timeSkipPenaltyInput").value || 10), 0, 300);
+      const bonusPerSavedSecond = clamp(Number($("bonusPerSecondInput").value || 0), 0, 99999);
+      const minVis = clamp(Number($("minVisInput").value || 0.55), 0.0, 1.0);
+	  const matchThreshold = clamp(Number($("matchThresholdInput").value || 75), 50, 95) / 100; 
+
+      settings = { mode, totalTimeSec, intervalSec, successScore, skipPenaltyScore, timeSkipPenaltySec, bonusPerSavedSecond, minVis, matchThreshold };
+    }
+	
+	function updateThresholdUI(){
+	  const el = document.getElementById("thresholdLbl");
+	  if(!el) return;
+	  const percent = Math.round((settings.matchThreshold ?? 0.75) * 100);
+	  el.textContent = percent + "%";
+	}
+
+
+    /***********************
+     *  Pose library + matcher
+     ***********************/
+    function getPoseThreshold(){ return settings.matchThreshold ?? 0.75; }
+
+
+    const PoseLibrary = [
+      { key:"hands_up", name:"Hands Up", desc:"Raise both hands above your head.",
+        target:{ lhUp:1,rhUp:1,armsWide:0.3,squat:0.0,lElbowStraight:0.5,rElbowStraight:0.5 },
+        weight:{ lhUp:2.0,rhUp:2.0,armsWide:0.6,squat:0.5,lElbowStraight:0.8,rElbowStraight:0.8 }
+      },
+      { key:"t_pose", name:"T Pose", desc:"Stretch arms sideways like a 'T'.",
+        target:{ lhUp:0,rhUp:0,armsWide:1.0,squat:0.0,lElbowStraight:1.0,rElbowStraight:1.0 },
+        weight:{ lhUp:0.8,rhUp:0.8,armsWide:2.2,squat:0.5,lElbowStraight:1.4,rElbowStraight:1.4 }
+      },
+      { key:"left_arm_up", name:"Left Arm Up", desc:"Left hand up, right hand down.",
+        target:{ lhUp:1.0,rhUp:0.0,armsWide:0.4,squat:0.0,lElbowStraight:0.6,rElbowStraight:0.4 },
+        weight:{ lhUp:2.2,rhUp:1.8,armsWide:0.8,squat:0.5,lElbowStraight:0.8,rElbowStraight:0.5 }
+      },
+      { key:"right_arm_up", name:"Right Arm Up", desc:"Right hand up, left hand down.",
+        target:{ lhUp:0.0,rhUp:1.0,armsWide:0.4,squat:0.0,lElbowStraight:0.4,rElbowStraight:0.6 },
+        weight:{ lhUp:1.8,rhUp:2.2,armsWide:0.8,squat:0.5,lElbowStraight:0.5,rElbowStraight:0.8 }
+      },
+      { key:"squat", name:"Squat", desc:"Bend knees (a light squat).",
+        target:{ lhUp:0.0,rhUp:0.0,armsWide:0.3,squat:1.0,lElbowStraight:0.4,rElbowStraight:0.4 },
+        weight:{ lhUp:0.7,rhUp:0.7,armsWide:0.6,squat:2.8,lElbowStraight:0.4,rElbowStraight:0.4 }
+      }
+    ];
+
+    function pickRandomPose(excludeKey=null){
+      if(PoseLibrary.length===1) return PoseLibrary[0];
+      let p;
+      for(let i=0;i<12;i++){
+        p = PoseLibrary[Math.floor(Math.random()*PoseLibrary.length)];
+        if(p.key !== excludeKey) return p;
+      }
+      return PoseLibrary[0];
+    }
+
+    const LM = {
+      L_SHOULDER:11, R_SHOULDER:12,
+      L_ELBOW:13, R_ELBOW:14,
+      L_WRIST:15, R_WRIST:16,
+      L_HIP:23, R_HIP:24,
+      L_KNEE:25, R_KNEE:26,
+      L_ANKLE:27, R_ANKLE:28
+    };
+
+    function angle(a,b,c){
+      const abx=a.x-b.x, aby=a.y-b.y;
+      const cbx=c.x-b.x, cby=c.y-b.y;
+      const dot=(abx*cbx + aby*cby);
+      const ab=Math.hypot(abx,aby);
+      const cb=Math.hypot(cbx,cby);
+      if(ab<1e-6||cb<1e-6) return 0;
+      let cos=dot/(ab*cb);
+      cos=clamp(cos,-1,1);
+      return Math.acos(cos)*(180/Math.PI);
+    }
+
+    function visibilityOk(lms, minVis){
+      const ids=[LM.L_SHOULDER,LM.R_SHOULDER,LM.L_HIP,LM.R_HIP];
+      const v=ids.map(i=>lms[i]?.visibility ?? 0);
+      const avg=v.reduce((a,b)=>a+b,0)/v.length;
+      return avg>=minVis;
+    }
+
+    function extractFeatures(lms){
+      const ls=lms[LM.L_SHOULDER], rs=lms[LM.R_SHOULDER];
+      const le=lms[LM.L_ELBOW], re=lms[LM.R_ELBOW];
+      const lw=lms[LM.L_WRIST], rw=lms[LM.R_WRIST];
+      const lh=lms[LM.L_HIP], rh=lms[LM.R_HIP];
+      const lk=lms[LM.L_KNEE], rk=lms[LM.R_KNEE];
+      const la=lms[LM.L_ANKLE], ra=lms[LM.R_ANKLE];
+
+      const lElbAng=angle(ls,le,lw);
+      const rElbAng=angle(rs,re,rw);
+      const lElbowStraight=clamp((lElbAng-90)/90,0,1);
+      const rElbowStraight=clamp((rElbAng-90)/90,0,1);
+
+      const lKneeAng=angle(lh,lk,la);
+      const rKneeAng=angle(rh,rk,ra);
+      const lKneeBend=clamp((180-lKneeAng)/90,0,1);
+      const rKneeBend=clamp((180-rKneeAng)/90,0,1);
+      const squat=(lKneeBend+rKneeBend)/2;
+
+      const lhUp=clamp((ls.y - lw.y)/0.25,0,1);
+      const rhUp=clamp((rs.y - rw.y)/0.25,0,1);
+
+      const shoulderWidth=Math.max(1e-6, Math.abs(rs.x-ls.x));
+      const lwDist=Math.abs(lw.x-ls.x)/shoulderWidth;
+      const rwDist=Math.abs(rw.x-rs.x)/shoulderWidth;
+      const armsWide=clamp(((lwDist+rwDist)/2 - 0.6)/0.8,0,1);
+
+      return { lhUp,rhUp,armsWide,squat,lElbowStraight,rElbowStraight };
+    }
+
+    function poseMatchScore(features, poseDef){
+      let wsum=0, ssum=0;
+      for(const k of Object.keys(poseDef.target)){
+        const target=poseDef.target[k];
+        const w=poseDef.weight?.[k] ?? 1;
+        const val=features[k];
+        const err=Math.abs(val-target);
+        const sim=1-clamp(err,0,1);
+        ssum += sim*w;
+        wsum += w;
+      }
+      return wsum>0 ? clamp(ssum/wsum,0,1) : 0;
+    }
+
+    /***********************
+     *  VIDEO + CANVAS + MEDIAPIPE Pose
+     ***********************/
+    const videoEl = $("video");
+    const canvasEl = $("overlay");
+    const ctx2d = canvasEl.getContext("2d");
+
+    function resizeCanvas(){
+      const rect = videoEl.getBoundingClientRect();
+      canvasEl.width = Math.max(1, rect.width * devicePixelRatio);
+      canvasEl.height = Math.max(1, rect.height * devicePixelRatio);
+    }
+    window.addEventListener("resize", resizeCanvas);
+
+    function setMatchUI(p){
+      const pct = Math.round(p*100);
+      $("matchBar").style.width = pct + "%";
+      $("matchPct").textContent = pct + "%";
+      if(p >= getPoseThreshold()) $("matchPct").style.color = "var(--good)";
+      else if(p >= 0.55) $("matchPct").style.color = "var(--warn)";
+      else $("matchPct").style.color = "var(--text)";
+    }
+
+    function getPoseConnections(){
+      // Different builds expose this differently
+      return window.POSE_CONNECTIONS
+        || (window.Pose && window.Pose.POSE_CONNECTIONS)
+        || (window.Pose && window.Pose.Pose && window.Pose.POSE_CONNECTIONS)
+        || null;
+    }
+    function drawOverlay(results){
+      const w = canvasEl.width, h = canvasEl.height;
+      ctx2d.clearRect(0,0,w,h);
+      if(!results.poseLandmarks) return;
+
+      const conns = getPoseConnections();
+
+      // Drawing utils in UMD build: drawConnectors/drawLandmarks are global
+      const dc = window.drawConnectors;
+      const dl = window.drawLandmarks;
+
+      if(typeof dc === "function" && typeof dl === "function" && conns){
+        dc(ctx2d, results.poseLandmarks, conns, {color:"rgba(88,215,255,0.9)", lineWidth:4});
+        dl(ctx2d, results.poseLandmarks, {color:"rgba(34,197,94,0.9)", lineWidth:2, radius:3});
+      }
+    }
+
+    let mpPose = null;
+    let videoStream = null;
+    let rafId = null;
+
+    async function stopCamera(){
+      if(rafId){ cancelAnimationFrame(rafId); rafId = null; }
+      if(videoStream){
+        try{ videoStream.getTracks().forEach(t => t.stop()); }catch(e){}
+        videoStream = null;
+      }
+      try{ videoEl.srcObject = null; }catch(e){}
+    }
+
+    function cameraErrorHint(err){
+      const name = String(err?.name || "");
+      const msg  = String(err?.message || "");
+      if(name === "SecurityError" || msg.toLowerCase().includes("secure") || msg.toLowerCase().includes("https")){
+        return "Camera blocked by browser security. Try HTTPS or localhost, or open in the same way your other camera game runs.";
+      }
+      if(name === "NotAllowedError" || name === "PermissionDeniedError"){
+        return "Camera permission denied. Allow camera in browser site settings and retry.";
+      }
+      if(name === "NotFoundError" || name === "DevicesNotFoundError"){
+        return "No camera found on this device.";
+      }
+      if(name === "NotReadableError" || name === "TrackStartError"){
+        return "Camera is busy (used by another app). Close other apps and retry.";
+      }
+      if(name === "OverconstrainedError"){
+        return "Requested camera constraints not available. Trying fallback camera should fix it.";
+      }
+      return `Camera failed: ${name || "Error"}${msg ? " — " + msg : ""}`.trim();
+    }
+
+    async function getBackCameraStream(){
+      try{
+        return await navigator.mediaDevices.getUserMedia({
+          audio:false,
+          video:{ facingMode: "environment" }
+        });
+      }catch(e1){
+        return await navigator.mediaDevices.getUserMedia({
+          audio:false,
+          video:true
+        });
+      }
+    }
+
+    function getPoseCtor(){
+      // Some builds: window.Pose is constructor
+      // Some builds: window.Pose.Pose is constructor
+      if(window.Pose && typeof window.Pose === "function") return window.Pose;
+      if(window.Pose && window.Pose.Pose && typeof window.Pose.Pose === "function") return window.Pose.Pose;
+      return null;
+    }
+
+    async function startPosePipeline(){
+      if(!mpPose){
+        const PoseCtor = getPoseCtor();
+        if(!PoseCtor) throw new Error("MediaPipe Pose not loaded (Pose constructor missing)");
+
+        mpPose = new PoseCtor({
+          locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5/${file}`
+        });
+
+        mpPose.setOptions({
+          modelComplexity: 1,
+          smoothLandmarks: true,
+          enableSegmentation: false,
+          minDetectionConfidence: 0.5,
+          minTrackingConfidence: 0.5
+        });
+
+        mpPose.onResults(onPoseResults);
+      }
+
+      const tick = async () => {
+        if(!running) return;
+        try{ await mpPose.send({ image: videoEl }); }catch(e){}
+        rafId = requestAnimationFrame(tick);
+      };
+      rafId = requestAnimationFrame(tick);
+    }
+
+    async function startCameraAndPose(){
+      resizeCanvas();
+      await stopCamera();
+
+      videoStream = await getBackCameraStream();
+      videoEl.srcObject = videoStream;
+
+      await new Promise((resolve, reject) => {
+        videoEl.onloadedmetadata = async () => {
+          try{
+            await videoEl.play();
+            resolve();
+          }catch(err){
+            reject(err);
+          }
+        };
+        videoEl.onerror = (e) => reject(e);
+      });
+
+      await new Promise(r => requestAnimationFrame(r));
+      resizeCanvas();
+
+      await startPosePipeline();
+    }
+
+    /***********************
+     *  GAME STATE
+     ***********************/
+    let pose = null;
+    let score = 0;
+    let running = false;
+
+    let totalRemaining = 0;
+    let intervalRemaining = 0;
+    let bankSaved = 0;
+    let totalSaved = 0;
+
+    let totalTimer = null;
+    let intervalTimer = null;
+
+    let matchHold = 0;
+    const HOLD_REQUIRED = 6;
+
+    function setPose(p){
+      pose = p;
+      $("poseName").textContent = p.name;
+      $("poseDesc").textContent = p.desc;
+      setMatchUI(0);
+      matchHold = 0;
+    }
+
+    function updateHUD(){
+      $("scoreLbl").textContent = String(score);
+      $("totalTimeLbl").textContent = fmtTime(totalRemaining);
+
+      const scoreMode = settings.mode === "score";
+      $("intervalPill").style.display = scoreMode ? "" : "none";
+      if(scoreMode){
+        $("intervalTimeLbl").textContent = fmtTime(intervalRemaining);
+        $("bankLbl").textContent = bankSaved > 0 ? `(+${fmtTime(bankSaved)} saved)` : "";
+      }
+      $("modeBadge").textContent = scoreMode ? "SCORE MODE" : "TIME MODE";
+    }
+
+    function stopTimers(){
+      if(totalTimer){ clearInterval(totalTimer); totalTimer = null; }
+      if(intervalTimer){ clearInterval(intervalTimer); intervalTimer = null; }
+    }
+
+    function startTotalTimer(){
+      if(totalTimer) clearInterval(totalTimer);
+      totalTimer = setInterval(()=>{
+        if(!running) return;
+        totalRemaining -= 1;
+        if(totalRemaining <= 0){
+          totalRemaining = 0;
+          updateHUD();
+          endGame();
+          return;
+        }
+        updateHUD();
+      }, 1000);
+    }
+
+    function startIntervalTimer(){
+      if(intervalTimer) clearInterval(intervalTimer);
+      intervalTimer = setInterval(()=>{
+        if(!running || settings.mode !== "score") return;
+
+        intervalRemaining = Math.min(intervalRemaining, totalRemaining);
+        intervalRemaining -= 1;
+
+        if(intervalRemaining <= 0){
+          intervalRemaining = 0;
+          bankSaved = 0;
+          updateHUD();
+          showToast("Time's up! Next pose.", "warn", 900);
+          nextPose(true);
+          return;
+        }
+        updateHUD();
+      }, 1000);
+    }
+
+    function computeNextInterval(){
+      intervalRemaining = clamp(settings.intervalSec + bankSaved, 1, 99999);
+      intervalRemaining = Math.min(intervalRemaining, totalRemaining);
+      updateHUD();
+    }
+
+    function nextPose(auto=false){
+      const prev = pose?.key ?? null;
+      setPose(pickRandomPose(prev));
+      if(settings.mode === "score"){
+        if(auto) bankSaved = 0;
+        computeNextInterval();
+      }
+      setMatchUI(0);
+      matchHold = 0;
+    }
+
+    function onPoseSuccess(){
+      if(!running) return;
+
+      score += settings.successScore;
+      beep("success");
+      showToast(`Success! +${settings.successScore}`, "good", 900);
+
+      if(settings.mode === "score"){
+        bankSaved = intervalRemaining;
+        totalSaved += intervalRemaining;
+      }
+      updateHUD();
+      nextPose(false);
+    }
+
+    function manualSkip(){
+      if(!running) return;
+
+      if(settings.skipPenaltyScore > 0) score = Math.max(0, score - settings.skipPenaltyScore);
+      beep("skip");
+
+      if(settings.mode === "score"){
+        bankSaved = 0;
+        showToast(`Skipped. -${settings.skipPenaltyScore} score`, "bad", 900);
+        nextPose(false);
+      }else{
+        totalRemaining = Math.max(0, totalRemaining - settings.timeSkipPenaltySec);
+        showToast(`Skipped. -${settings.skipPenaltyScore} score, -${settings.timeSkipPenaltySec}s`, "bad", 1100);
+        if(totalRemaining <= 0){
+          totalRemaining = 0;
+          updateHUD();
+          endGame();
+          return;
+        }
+        nextPose(false);
+      }
+      updateHUD();
+    }
+
+    function endGame(){
+      if(!running) return;
+      running = false;
+      stopTimers();
+      stopCamera();
+
+      let bonus = 0;
+      if(settings.mode === "score"){
+        const savedSeconds = totalSaved + bankSaved;
+        bonus = savedSeconds * settings.bonusPerSavedSecond;
+      }
+      const final = score + bonus;
+
+      $("finalScore").textContent = String(final);
+      if(settings.mode === "score"){
+        const savedSeconds = totalSaved + bankSaved;
+        $("finalMeta").innerHTML =
+          `Base score: <b class="mono">${score}</b><br>` +
+          `Saved time: <b class="mono">${savedSeconds}s</b> → Bonus: <b class="mono">${bonus}</b><br>` +
+          `Final score: <b class="mono">${final}</b>`;
+      }else{
+        $("finalMeta").innerHTML =
+          `Final score: <b class="mono">${final}</b><br>` +
+          `Mode: Time Mode`;
+      }
+
+      setScreen("endScreen");
+    }
+
+    async function startGame(){
+      score = 0;
+      totalRemaining = settings.totalTimeSec;
+      intervalRemaining = 0;
+      bankSaved = 0;
+      totalSaved = 0;
+
+      setScreen("gameScreen");
+      updateHUD();
+      running = true;
+
+      try{
+        await startCameraAndPose();
+      }catch(err){
+        running = false;
+        showToast(cameraErrorHint(err), "bad", 2800);
+        setScreen("startScreen");
+        return;
+      }
+
+      setPose(pickRandomPose(null));
+
+      if(settings.mode === "score"){
+        computeNextInterval();
+        startIntervalTimer();
+      }
+      startTotalTimer();
+    }
+
+    /***********************
+     *  Pose callback
+     ***********************/
+    function onPoseResults(results){
+      if(!running) return;
+
+      drawOverlay(results);
+
+      let match = 0;
+      if(results.poseLandmarks){
+        const lms = results.poseLandmarks;
+        const visible = visibilityOk(lms, settings.minVis);
+        const feats = extractFeatures(lms);
+        match = pose ? poseMatchScore(feats, pose) : 0;
+
+        if(!visible){
+          match = Math.min(match, 0.35);
+          if(Math.random() < 0.01){
+            showToast("Show more of your body for better detection.", "warn", 1200);
+          }
+        }
+      }else{
+        match = 0;
+      }
+
+      setMatchUI(match);
+
+      if(match >= getPoseThreshold()){
+        matchHold++;
+        if(matchHold >= HOLD_REQUIRED){
+          matchHold = 0;
+          onPoseSuccess();
+        }
+      }else{
+        matchHold = 0;
+      }
+    }
+
+    /***********************
+     *  Modal
+     ***********************/
+    function openSettings(){
+      settings = loadSettings();
+      syncSettingsUI();
+      $("settingsBackdrop").classList.add("show");
+    }
+    function closeSettings(){
+      $("settingsBackdrop").classList.remove("show");
+    }
+
+    $("openSettingsBtn").addEventListener("click", openSettings);
+    $("closeSettingsBtn").addEventListener("click", closeSettings);
+    $("settingsBackdrop").addEventListener("click", (e)=>{
+      if(e.target === $("settingsBackdrop")) closeSettings();
+    });
+    $("modeSelect").addEventListener("change", ()=>{
+      settings.mode = $("modeSelect").value;
+      syncSettingsUI();
+    });
+    $("saveSettingsBtn").addEventListener("click", ()=>{
+      readSettingsUI();
+      saveSettings();
+      syncSettingsUI();
+	  updateThresholdUI();   // <-- add this
+      closeSettings();
+      showToast("Settings saved.", "good", 900);
+    });
+    $("resetSettingsBtn").addEventListener("click", ()=>{
+      settings = {...DEFAULTS};
+      saveSettings();
+      syncSettingsUI();
+      showToast("Reset to defaults.", "warn", 900);
+    });
+
+    /***********************
+     *  Buttons
+     ***********************/
+    $("startBtn").addEventListener("click", async ()=>{
+      try{
+        if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        await audioCtx.resume();
+      }catch(e){}
+      settings = loadSettings();
+      syncSettingsUI();
+      startGame();
+    });
+
+    $("skipBtn").addEventListener("click", manualSkip);
+    $("endBtn").addEventListener("click", endGame);
+    $("playAgainBtn").addEventListener("click", ()=> startGame());
+    $("backHomeBtn").addEventListener("click", ()=>{
+      running = false;
+      stopTimers();
+      stopCamera();
+      setScreen("startScreen");
+    });
+
+    document.addEventListener("touchmove", (e)=>{
+      if($("gameScreen").classList.contains("active")) e.preventDefault();
+    }, {passive:false});
+
+    syncSettingsUI();
+    $("totalTimeLbl").textContent = fmtTime(settings.totalTimeSec);
+  </script>
+</body>
+</html>
