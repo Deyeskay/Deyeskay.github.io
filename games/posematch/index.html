@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!DOCTYPE html> 
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -6,7 +6,6 @@
   <title>Pose Match Game</title>
 
   <!-- MediaPipe Pose + Drawing Utils -->
-  <!-- (Pinning versions helps stability across devices/CDNs) -->
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5/pose.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils@0.3/drawing_utils.js"></script>
 
@@ -130,6 +129,35 @@
       font-weight:900;margin:0 0 6px;font-size:14px;
       display:flex;align-items:center;justify-content:space-between;gap:10px;
     }
+
+    /* ✅ NEW: thumbnail */
+    .pose-thumb-wrap{
+      margin:8px 0 6px;
+      width:100%;
+      height:120px;
+      border-radius:12px;
+      overflow:hidden;
+      background:rgba(255,255,255,0.06);
+      border:1px solid var(--border);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      position:relative;
+    }
+    .pose-thumb-wrap img{
+      width:100%;
+      height:100%;
+      object-fit:contain;
+      display:none;
+    }
+    #poseThumbNA{
+      font-weight:900;
+      color:var(--muted);
+      font-size:14px;
+      display:none;
+      user-select:none;
+    }
+
     .pose-desc{ margin:0;color:var(--muted);font-size:12px;line-height:1.35; }
     .match-row{ margin-top:10px;display:flex;gap:10px;align-items:center;justify-content:space-between; }
     .bar{
@@ -266,13 +294,15 @@
   <section id="startScreen" class="screen active">
     <div class="start-card">
       <div class="topbar">
+	    <button class="icon-btn" id="openPoseCreatorBtn" aria-label="Pose Creator" title="Pose Creator">➕</button>
         <button class="icon-btn" id="openSettingsBtn" aria-label="Settings" title="Settings">⚙️</button>
       </div>
       <h1 class="title">Pose Match</h1>
-      <p class="subtitle">
-        Show a random pose to the player. If match ≥ <b>75%</b>, score increases and next pose appears.
+      <p class="subtitle" id="startSubtitle">
+        Show a random pose to the player. If match ≥ <b id="startThreshold">75%</b>, score increases and next pose appears.
       </p>
       <button class="primary-btn" id="startBtn">Start Game</button>
+      <div class="note" id="importNote" style="display:none;"></div>
       <div class="note">Tip: Use good lighting and show full upper-body for better detection.</div>
     </div>
   </section>
@@ -299,6 +329,13 @@
               <span>📌 Pose: <span id="poseName">—</span></span>
               <span id="modeBadge" style="font-weight:900; color:var(--muted); font-size:12px;">MODE</span>
             </div>
+
+            <!-- ✅ NEW: thumbnail block -->
+            <div class="pose-thumb-wrap">
+              <img id="poseThumb" alt="pose thumbnail" />
+              <div id="poseThumbNA">NA</div>
+            </div>
+
             <p class="pose-desc" id="poseDesc">—</p>
 
             <div class="match-row">
@@ -388,17 +425,17 @@
           <label for="bonusPerSecondInput">Bonus Points per Saved Second — Score Mode</label>
           <input id="bonusPerSecondInput" type="number" min="0" step="1" value="1" />
         </div>
-		
-		<div class="field">
-		  <label for="matchThresholdInput">Match Threshold (%)</label>
-		  <input id="matchThresholdInput" type="number" min="50" max="95" step="1" value="75" />
-		  <div class="hint">Lower = easier. Higher = stricter.</div>
-		</div>
 
+        <div class="field">
+          <label for="matchThresholdInput">Match Threshold (%)</label>
+          <input id="matchThresholdInput" type="number" min="50" max="95" step="1" value="75" />
+          <div class="hint">Lower = easier. Higher = stricter.</div>
+        </div>
 
         <div class="field">
           <label for="minVisInput">Min Landmark Confidence (0.0 - 1.0)</label>
           <input id="minVisInput" type="number" min="0" max="1" step="0.05" value="0.55" />
+          <div class="hint">Increase to reduce false positives, but it may fail if lighting is poor.</div>
         </div>
       </div>
 
@@ -478,7 +515,7 @@
       timeSkipPenaltySec: 10,
       bonusPerSavedSecond: 1,
       minVis: 0.55,
-	  matchThreshold: 0.75
+      matchThreshold: 0.75
     };
     let settings = loadSettings();
 
@@ -497,6 +534,7 @@
           timeSkipPenaltySec: Number(s.timeSkipPenaltySec ?? DEFAULTS.timeSkipPenaltySec),
           bonusPerSavedSecond: Number(s.bonusPerSavedSecond ?? DEFAULTS.bonusPerSavedSecond),
           minVis: Number(s.minVis ?? DEFAULTS.minVis),
+          matchThreshold: Number(s.matchThreshold ?? DEFAULTS.matchThreshold),
         };
       }catch{
         return {...DEFAULTS};
@@ -514,15 +552,14 @@
       $("timeSkipPenaltyInput").value = settings.timeSkipPenaltySec;
       $("bonusPerSecondInput").value = settings.bonusPerSavedSecond;
       $("minVisInput").value = settings.minVis;
-	  $("matchThresholdInput").value = Math.round(settings.matchThreshold * 100);
-
+      $("matchThresholdInput").value = Math.round(settings.matchThreshold * 100);
 
       const scoreMode = settings.mode === "score";
       $("intervalField").style.display = scoreMode ? "" : "none";
       $("bonusField").style.display = scoreMode ? "" : "none";
       $("timeSkipField").style.display = scoreMode ? "none" : "";
-	  
-	  updateThresholdUI();
+
+      updateThresholdUI();
     }
     function readSettingsUI(){
       const mode = $("modeSelect").value;
@@ -533,26 +570,89 @@
       const timeSkipPenaltySec = clamp(Number($("timeSkipPenaltyInput").value || 10), 0, 300);
       const bonusPerSavedSecond = clamp(Number($("bonusPerSecondInput").value || 0), 0, 99999);
       const minVis = clamp(Number($("minVisInput").value || 0.55), 0.0, 1.0);
-	  const matchThreshold = clamp(Number($("matchThresholdInput").value || 75), 50, 95) / 100; 
+      const matchThreshold = clamp(Number($("matchThresholdInput").value || 75), 50, 95) / 100;
 
       settings = { mode, totalTimeSec, intervalSec, successScore, skipPenaltyScore, timeSkipPenaltySec, bonusPerSavedSecond, minVis, matchThreshold };
     }
-	
-	function updateThresholdUI(){
-	  const el = document.getElementById("thresholdLbl");
-	  if(!el) return;
-	  const percent = Math.round((settings.matchThreshold ?? 0.75) * 100);
-	  el.textContent = percent + "%";
-	}
 
+    function updateThresholdUI(){
+      const percent = Math.round((settings.matchThreshold ?? 0.75) * 100);
+      $("thresholdLbl").textContent = percent + "%";
+      $("startThreshold").textContent = percent + "%";
+    }
+
+    /***********************
+     *  IMPORTED POSES (from pose_creator.html)
+     ***********************/
+    const IMPORT_KEY = "POSEMATCH_IMPORTED_POSES_V1";
+
+    function validatePoseObj(p){
+      if(!p || typeof p !== "object") return false;
+      if(!p.key || !p.name || !p.target) return false;
+      if(typeof p.target !== "object") return false;
+      return true;
+    }
+
+    // ✅ FIX: preserve thumbnail if present
+    function normalizePose(p){
+      const baseKeys = ["lhUp","rhUp","armsWide","squat","lElbowStraight","rElbowStraight"];
+      const target = {};
+      for(const k of baseKeys){
+        target[k] = clamp(Number(p.target?.[k] ?? 0), 0, 1);
+      }
+      const weight = {};
+      for(const k of baseKeys){
+        weight[k] = Math.max(0, Number(p.weight?.[k] ?? 1));
+      }
+      return {
+        key: String(p.key),
+        name: String(p.name),
+        desc: String(p.desc || ""),
+        target, weight,
+        thumbnail: p.thumbnail || null
+      };
+    }
+
+    function loadImportedPoses(){
+      try{
+        const raw = localStorage.getItem(IMPORT_KEY);
+        if(!raw) return [];
+        const arr = JSON.parse(raw);
+        if(!Array.isArray(arr)) return [];
+        const good = arr.filter(validatePoseObj).map(normalizePose);
+
+        const map = new Map();
+        for(const p of good) map.set(p.key, p);
+        return [...map.values()];
+      }catch{
+        return [];
+      }
+    }
+
+    function mergePoseLibrary(base, imported){
+      const map = new Map();
+      for(const p of base) map.set(p.key, p);
+      for(const p of imported) map.set(p.key, p);
+      return [...map.values()];
+    }
+
+    function showImportBanner(count, total){
+      const note = $("importNote");
+      if(!note) return;
+      if(count > 0){
+        note.style.display = "";
+        note.innerHTML = `✅ Imported <b>${count}</b> custom pose(s). Total poses available: <b>${total}</b>.`;
+      }else{
+        note.style.display = "none";
+      }
+    }
 
     /***********************
      *  Pose library + matcher
      ***********************/
     function getPoseThreshold(){ return settings.matchThreshold ?? 0.75; }
 
-
-    const PoseLibrary = [
+    const BuiltInPoseLibrary = [
       { key:"hands_up", name:"Hands Up", desc:"Raise both hands above your head.",
         target:{ lhUp:1,rhUp:1,armsWide:0.3,squat:0.0,lElbowStraight:0.5,rElbowStraight:0.5 },
         weight:{ lhUp:2.0,rhUp:2.0,armsWide:0.6,squat:0.5,lElbowStraight:0.8,rElbowStraight:0.8 }
@@ -574,6 +674,16 @@
         weight:{ lhUp:0.7,rhUp:0.7,armsWide:0.6,squat:2.8,lElbowStraight:0.4,rElbowStraight:0.4 }
       }
     ];
+
+    let PoseLibrary = [];
+
+    function rebuildPoseLibrary(){
+      const imported = loadImportedPoses();
+      PoseLibrary = mergePoseLibrary(BuiltInPoseLibrary, imported);
+      showImportBanner(imported.length, PoseLibrary.length);
+      if(PoseLibrary.length === 0) PoseLibrary = [...BuiltInPoseLibrary];
+    }
+    rebuildPoseLibrary();
 
     function pickRandomPose(excludeKey=null){
       if(PoseLibrary.length===1) return PoseLibrary[0];
@@ -681,7 +791,6 @@
     }
 
     function getPoseConnections(){
-      // Different builds expose this differently
       return window.POSE_CONNECTIONS
         || (window.Pose && window.Pose.POSE_CONNECTIONS)
         || (window.Pose && window.Pose.Pose && window.Pose.POSE_CONNECTIONS)
@@ -693,8 +802,6 @@
       if(!results.poseLandmarks) return;
 
       const conns = getPoseConnections();
-
-      // Drawing utils in UMD build: drawConnectors/drawLandmarks are global
       const dc = window.drawConnectors;
       const dl = window.drawLandmarks;
 
@@ -753,8 +860,6 @@
     }
 
     function getPoseCtor(){
-      // Some builds: window.Pose is constructor
-      // Some builds: window.Pose.Pose is constructor
       if(window.Pose && typeof window.Pose === "function") return window.Pose;
       if(window.Pose && window.Pose.Pose && typeof window.Pose.Pose === "function") return window.Pose.Pose;
       return null;
@@ -831,10 +936,25 @@
     let matchHold = 0;
     const HOLD_REQUIRED = 6;
 
+    // ✅ FIX: show thumbnail if exists else NA
     function setPose(p){
       pose = p;
       $("poseName").textContent = p.name;
       $("poseDesc").textContent = p.desc;
+
+      const img = $("poseThumb");
+      const na  = $("poseThumbNA");
+
+      if(p.thumbnail){
+        img.src = p.thumbnail;
+        img.style.display = "block";
+        na.style.display = "none";
+      }else{
+        img.removeAttribute("src");
+        img.style.display = "none";
+        na.style.display = "block";
+      }
+
       setMatchUI(0);
       matchHold = 0;
     }
@@ -967,17 +1087,26 @@
         $("finalMeta").innerHTML =
           `Base score: <b class="mono">${score}</b><br>` +
           `Saved time: <b class="mono">${savedSeconds}s</b> → Bonus: <b class="mono">${bonus}</b><br>` +
-          `Final score: <b class="mono">${final}</b>`;
+          `Final score: <b class="mono">${final}</b><br>` +
+          `Poses available: <b class="mono">${PoseLibrary.length}</b>`;
       }else{
         $("finalMeta").innerHTML =
           `Final score: <b class="mono">${final}</b><br>` +
-          `Mode: Time Mode`;
+          `Mode: Time Mode<br>` +
+          `Poses available: <b class="mono">${PoseLibrary.length}</b>`;
       }
 
       setScreen("endScreen");
     }
 
     async function startGame(){
+      rebuildPoseLibrary();
+
+      if(PoseLibrary.length < 1){
+        showToast("No poses available. Add poses in pose_creator.html first.", "bad", 2600);
+        return;
+      }
+
       score = 0;
       totalRemaining = settings.totalTimeSec;
       intervalRemaining = 0;
@@ -1069,7 +1198,7 @@
       readSettingsUI();
       saveSettings();
       syncSettingsUI();
-	  updateThresholdUI();   // <-- add this
+      updateThresholdUI();
       closeSettings();
       showToast("Settings saved.", "good", 900);
     });
@@ -1109,6 +1238,17 @@
 
     syncSettingsUI();
     $("totalTimeLbl").textContent = fmtTime(settings.totalTimeSec);
+
+    (function initImportInfo(){
+      rebuildPoseLibrary();
+      updateThresholdUI();
+    })();
+	
+	// + button → open pose creator page
+	document.getElementById("openPoseCreatorBtn")
+	  .addEventListener("click", () => {
+		window.location.href = "pose_creator.html";
+	  });
   </script>
 </body>
 </html>
