@@ -1,0 +1,1170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Pose Studio (Constrained + Saved Poses)</title>
+
+<style>
+  :root{
+    --bg:#0f141a;
+    --panel:#0b1220;
+    --panel2:#111827;
+    --line:rgba(255,255,255,0.12);
+    --muted:rgba(255,255,255,0.75);
+    --text:#ffffff;
+    --good:#22c55e;
+    --bad:#ef4444;
+    --blue:#2563eb;
+    --cyan:#00ffff;
+  }
+
+  body{
+    margin:0;
+    background:radial-gradient(1200px 600px at 50% 0%, rgba(37,99,235,0.20), transparent 60%),
+               radial-gradient(900px 500px at 10% 15%, rgba(34,197,94,0.12), transparent 55%),
+               var(--bg);
+    color:var(--text);
+    font-family:Arial, sans-serif;
+    display:flex;
+    justify-content:center;
+  }
+  
+	.title-bar{
+	  position:relative;
+	  width:100%;
+	  height:40px;
+	  display:flex;
+	  align-items:center;
+	  justify-content:center;
+	}
+
+	.title-bar h2{
+	  margin:0;
+	  font-weight:700;
+	}
+
+	.icon-btn{
+	  position:absolute;
+	  left:8px;
+	  background:none;
+	  border:none;
+	  font-size:20px;
+	  cursor:pointer;
+	}
+ 
+
+  .wrap{
+    width:min(980px, 96vw);
+    padding:14px 0 28px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:12px;
+  }
+
+  h2{ margin:8px 0 0; }
+
+  .topbar{
+    width:100%;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    flex-wrap:wrap;
+    background:rgba(0,0,0,0.18);
+    border:1px solid rgba(255,255,255,0.10);
+    border-radius:16px;
+    padding:10px 12px;
+    box-sizing:border-box;
+    backdrop-filter: blur(10px);
+  }
+
+  label{ user-select:none; }
+
+  .row{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    flex-wrap:wrap;
+  }
+
+  .pill{
+    display:inline-flex;
+    align-items:center;
+    gap:10px;
+    padding:8px 10px;
+    border-radius:999px;
+    background:rgba(255,255,255,0.06);
+    border:1px solid rgba(255,255,255,0.08);
+    font-size:13px;
+    color:rgba(255,255,255,0.9);
+  }
+
+  .mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
+
+  canvas{
+    background:linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+    border:1px solid rgba(255,255,255,0.12);
+    border-radius:16px;
+    touch-action:none;
+    width:min(420px, 94vw);
+    height:auto;
+    box-shadow:0 18px 55px rgba(0,0,0,0.45);
+  }
+
+  .controls{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    justify-content:center;
+    width:100%;
+  }
+
+  button{
+    padding:10px 14px;
+    border-radius:12px;
+    border:none;
+    font-weight:800;
+    cursor:pointer;
+    background:#334155;
+    color:white;
+  }
+  button:active{ transform:scale(0.99); }
+
+  .primary{ background:var(--good); color:#111; }
+  .secondary{ background:var(--blue); }
+  .danger{ background:var(--bad); }
+  .ghost{ background:rgba(255,255,255,0.10); border:1px solid rgba(255,255,255,0.12); }
+
+  .hint{
+    opacity:0.85;
+    font-size:13px;
+    text-align:center;
+    max-width:720px;
+    line-height:1.35;
+    color:rgba(255,255,255,0.85);
+  }
+
+  textarea#output{
+    width:100%;
+    height:190px;
+    background:#0b0f14;
+    color:#0f0;
+    border:1px solid rgba(255,255,255,0.14);
+    padding:12px;
+    font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    border-radius:14px;
+    box-sizing:border-box;
+    outline:none;
+  }
+
+  /* Toast */
+  #toastWrap{
+    position:fixed;
+    bottom:18px;
+    left:50%;
+    transform:translateX(-50%);
+    z-index:2000;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    width:min(560px, 92vw);
+    pointer-events:none;
+  }
+  .toast{
+    pointer-events:none;
+    background:rgba(15, 23, 42, 0.92);
+    border:1px solid rgba(255,255,255,0.12);
+    color:white;
+    border-radius:14px;
+    padding:12px 14px;
+    box-shadow:0 10px 30px rgba(0,0,0,0.35);
+    font-size:13px;
+    line-height:1.35;
+  }
+  .toast.ok{ border-color: rgba(34, 197, 94, 0.45); }
+  .toast.warn{ border-color: rgba(245, 158, 11, 0.45); }
+  .toast.err{ border-color: rgba(239, 68, 68, 0.45); }
+
+  /* Modal */
+  .modalBackdrop{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,0.55);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:1500;
+    padding:16px;
+    box-sizing:border-box;
+  }
+  .modal{
+    width:min(720px, 96vw);
+    background:var(--panel);
+    border:1px solid rgba(255,255,255,0.12);
+    border-radius:18px;
+    box-shadow:0 14px 40px rgba(0,0,0,0.55);
+    overflow:hidden;
+  }
+  .modalHeader{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:12px 14px;
+    border-bottom:1px solid rgba(255,255,255,0.08);
+  }
+  .modalHeader b{ font-size:15px; }
+  .iconBtn{
+    width:38px;height:38px;
+    border-radius:12px;
+    border:none;
+    background:rgba(255,255,255,0.10);
+    color:white;
+    cursor:pointer;
+    font-size:18px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .modalBody{ padding:14px; }
+
+  .field{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    margin-bottom:12px;
+  }
+  .field label{
+    font-size:12px;
+    opacity:0.85;
+  }
+  .field input, .field textarea{
+    width:100%;
+    padding:12px;
+    border-radius:12px;
+    border:1px solid rgba(255,255,255,0.12);
+    background:rgba(255,255,255,0.06);
+    color:white;
+    outline:none;
+    box-sizing:border-box;
+    font-size:14px;
+  }
+  .field textarea{
+    height:90px;
+    resize:none;
+    font-family:Arial;
+  }
+  .smallHint{
+    font-size:12px;
+    opacity:0.75;
+    margin-top:-6px;
+  }
+  .modalActions{
+    display:flex;
+    justify-content:flex-end;
+    gap:10px;
+    margin-top:10px;
+  }
+  .err{
+    margin-top:-4px;
+    font-size:12px;
+    color:#fca5a5;
+    background:rgba(239,68,68,0.12);
+    border:1px solid rgba(239,68,68,0.25);
+    padding:8px 10px;
+    border-radius:10px;
+    display:none;
+  }
+  .inputBad{
+    border-color: rgba(239,68,68,0.55) !important;
+  }
+
+  /* Saved poses list */
+  .savedTop{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-bottom:10px;
+  }
+  .savedGrid{
+    display:grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap:12px;
+  }
+  .poseCard{
+    background:rgba(255,255,255,0.06);
+    border:1px solid rgba(255,255,255,0.10);
+    border-radius:16px;
+    overflow:hidden;
+    display:flex;
+    flex-direction:column;
+  }
+  .poseThumb{
+    width:100%;
+    height:150px;
+    object-fit:contain;
+    background:rgba(0,0,0,0.25);
+  }
+  .poseMeta{
+    padding:10px 10px 12px;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+  }
+  .poseName{ font-weight:900; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .poseKey{ font-size:12px; opacity:0.9; }
+  .poseDesc{ font-size:12px; opacity:0.78; line-height:1.3; height:32px; overflow:hidden; }
+  .poseActions{
+    display:flex;
+    gap:8px;
+    justify-content:space-between;
+    padding:10px;
+    border-top:1px solid rgba(255,255,255,0.08);
+  }
+  .miniBtn{
+    flex:1;
+    padding:9px 10px;
+    border-radius:12px;
+    font-weight:900;
+    border:none;
+    cursor:pointer;
+    background:rgba(255,255,255,0.10);
+    color:white;
+  }
+  .miniBtn.dangerMini{
+    background:rgba(239,68,68,0.18);
+    border:1px solid rgba(239,68,68,0.25);
+  }
+  .miniBtn:active{ transform:scale(0.99); }
+
+  @media (max-width:480px){
+    .savedGrid{ grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+
+<body>
+<div class="wrap">
+
+  <div class="title-bar">
+	  <button id="backBtn" class="icon-btn" title="Back">
+	  <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+		   stroke="currentColor" stroke-width="2.5"
+		   stroke-linecap="round" stroke-linejoin="round">
+		<path d="M15 18l-6-6 6-6"/>
+	  </svg>
+	</button>
+	  <h2>Pose Studio</h2>
+	</div>
+
+  <div class="topbar">
+    <div class="row">
+      <label class="pill">
+        <input type="checkbox" id="symmetryToggle" />
+        Symmetry Mode
+      </label>
+    </div>
+
+    <div class="row pill">
+      <span>Realism:</span>
+      <input id="realismSlider" type="range" min="0" max="100" value="90" />
+      <span class="mono" id="realismVal">90%</span>
+    </div>
+
+    <div class="row">
+      <button class="danger" id="resetBtn">Reset</button>
+    </div>
+  </div>
+
+  <canvas id="c" width="420" height="560"></canvas>
+
+  <div class="controls">
+    <button class="primary" id="generateBtn">Generate Pose Object</button>
+    <button class="secondary" id="saveBtn">Save Pose + Thumbnail</button>
+    <button class="secondary" id="viewSavedBtn">View Saved Poses</button>
+    <button class="ghost" id="mirrorBtn">Mirror Left ↔ Right</button>
+    <button class="ghost" id="exportBtn">Export JSON</button>
+    <button class="ghost" id="loadToAppBtn">Load to App</button>
+  </div>
+
+  <div class="hint">
+    Drag joints. This tool enforces <b>fixed bone lengths</b> and <b>elbow/knee limits</b>, then auto-corrects impossible shapes.
+    Saved poses are stored in <b>localStorage</b> and can be deleted.
+  </div>
+
+  <textarea id="output" placeholder="Generated pose object / saved pose library appears here..."></textarea>
+
+</div>
+
+<!-- Toast -->
+<div id="toastWrap"></div>
+
+<!-- Modal: Pose details (Generate/Save) -->
+<div class="modalBackdrop" id="poseModal">
+  <div class="modal">
+    <div class="modalHeader">
+      <b id="poseModalTitle">Pose Details</b>
+      <button class="iconBtn" id="closePoseModal" title="Close">✕</button>
+    </div>
+    <div class="modalBody">
+      <div class="field">
+        <label for="poseName">Pose Name</label>
+        <input id="poseName" type="text" placeholder="e.g., Double Punch" />
+        <div class="err" id="errName"></div>
+      </div>
+
+      <div class="field">
+        <label for="poseKey">Key (auto-filled from name)</label>
+        <input id="poseKey" type="text" placeholder="e.g., double_punch" />
+        <div class="smallHint">Allowed: a-z, 0-9, underscore</div>
+        <div class="err" id="errKey"></div>
+      </div>
+
+      <div class="field">
+        <label for="poseDesc">Description</label>
+        <textarea id="poseDesc" placeholder="e.g., Extend both arms straight forward like punching."></textarea>
+        <div class="err" id="errDesc"></div>
+      </div>
+
+      <div class="modalActions">
+        <button class="ghost" id="cancelPoseModal">Cancel</button>
+        <button class="primary" id="confirmPoseModal">Confirm</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Saved poses list -->
+<div class="modalBackdrop" id="savedModal">
+  <div class="modal">
+    <div class="modalHeader">
+      <b>Saved Poses</b>
+      <button class="iconBtn" id="closeSavedModal" title="Close">✕</button>
+    </div>
+    <div class="modalBody">
+      <div class="savedTop">
+        <div class="pill">Total: <b id="savedCount">0</b></div>
+        <div class="row">
+          <button class="secondary" id="savedLoadToAppBtn">Load to App</button>
+          <button class="ghost" id="savedExportBtn">Export JSON</button>
+        </div>
+      </div>
+
+      <div id="savedEmpty" class="hint" style="display:none; margin:14px 0;">
+        No saved poses yet. Click <b>Save Pose + Thumbnail</b> to create your first pose.
+      </div>
+
+      <div class="savedGrid" id="savedGrid"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =========================
+   Storage keys
+========================= */
+const STORAGE_SAVED = "POSE_STUDIO_SAVED_V1";
+const LOAD_KEY = "POSEMATCH_IMPORTED_POSES_V1";
+
+/* =========================
+   Toast
+========================= */
+const toastWrap = document.getElementById("toastWrap");
+function showToast(msg, type="ok", ms=2400){
+  const el = document.createElement("div");
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  toastWrap.appendChild(el);
+
+  setTimeout(() => {
+    el.style.opacity = "0";
+    el.style.transform = "translateY(6px)";
+    el.style.transition = "opacity 220ms ease, transform 220ms ease";
+  }, Math.max(140, ms - 220));
+
+  setTimeout(() => el.remove(), ms);
+}
+
+/* =========================
+   DOM
+========================= */
+const canvas = document.getElementById("c");
+const ctx = canvas.getContext("2d");
+
+const symmetryToggle = document.getElementById("symmetryToggle");
+const realismSlider = document.getElementById("realismSlider");
+const realismVal = document.getElementById("realismVal");
+
+const outputEl = document.getElementById("output");
+
+const generateBtn = document.getElementById("generateBtn");
+const saveBtn = document.getElementById("saveBtn");
+const viewSavedBtn = document.getElementById("viewSavedBtn");
+const mirrorBtn = document.getElementById("mirrorBtn");
+const exportBtn = document.getElementById("exportBtn");
+const loadToAppBtn = document.getElementById("loadToAppBtn");
+const resetBtn = document.getElementById("resetBtn");
+
+const poseModal = document.getElementById("poseModal");
+const poseModalTitle = document.getElementById("poseModalTitle");
+const closePoseModal = document.getElementById("closePoseModal");
+const cancelPoseModal = document.getElementById("cancelPoseModal");
+const confirmPoseModal = document.getElementById("confirmPoseModal");
+
+const poseName = document.getElementById("poseName");
+const poseKey = document.getElementById("poseKey");
+const poseDesc = document.getElementById("poseDesc");
+
+const errName = document.getElementById("errName");
+const errKey = document.getElementById("errKey");
+const errDesc = document.getElementById("errDesc");
+
+const savedModal = document.getElementById("savedModal");
+const closeSavedModal = document.getElementById("closeSavedModal");
+const savedGrid = document.getElementById("savedGrid");
+const savedEmpty = document.getElementById("savedEmpty");
+const savedCount = document.getElementById("savedCount");
+const savedExportBtn = document.getElementById("savedExportBtn");
+const savedLoadToAppBtn = document.getElementById("savedLoadToAppBtn");
+
+/* =========================
+   Pose data (saved)
+========================= */
+let savedPoses = loadSavedPoses();
+
+/* =========================
+   Skeleton setup
+========================= */
+function getDefaultPose(){
+  return {
+    head:{x:210,y:80},
+    lShoulder:{x:150,y:160},
+    rShoulder:{x:270,y:160},
+    lElbow:{x:125,y:240},
+    rElbow:{x:295,y:240},
+    lWrist:{x:110,y:320},
+    rWrist:{x:310,y:320},
+    lHip:{x:175,y:310},
+    rHip:{x:245,y:310},
+    lKnee:{x:175,y:410},
+    rKnee:{x:245,y:410},
+    lAnkle:{x:175,y:525},
+    rAnkle:{x:245,y:525}
+  };
+}
+let joints = getDefaultPose();
+let dragging = null;
+
+const BONES = [
+  ["head","lShoulder"], ["head","rShoulder"],
+  ["lShoulder","rShoulder"],
+  ["lShoulder","lElbow"], ["lElbow","lWrist"],
+  ["rShoulder","rElbow"], ["rElbow","rWrist"],
+  ["lShoulder","lHip"], ["rShoulder","rHip"],
+  ["lHip","rHip"],
+  ["lHip","lKnee"], ["lKnee","lAnkle"],
+  ["rHip","rKnee"], ["rKnee","rAnkle"]
+];
+
+// (parent, joint, child, minDeg, maxDeg)
+const ANGLE_LIMITS = [
+  ["lShoulder","lElbow","lWrist", 25, 175],
+  ["rShoulder","rElbow","rWrist", 25, 175],
+  ["lHip","lKnee","lAnkle", 25, 175],
+  ["rHip","rKnee","rAnkle", 25, 175]
+];
+
+let REST = {};
+function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+function distAB(ax,ay,bx,by){ return Math.hypot(bx-ax, by-ay); }
+function dist(a,b){
+  return distAB(joints[a].x, joints[a].y, joints[b].x, joints[b].y);
+}
+function rebuildRestLengths(){
+  REST = {};
+  for(const [a,b] of BONES){
+    REST[`${a}|${b}`] = dist(a,b);
+    REST[`${b}|${a}`] = REST[`${a}|${b}`];
+  }
+}
+rebuildRestLengths();
+
+function angleDeg(A,B,C){
+  const abx = A.x - B.x, aby = A.y - B.y;
+  const cbx = C.x - B.x, cby = C.y - B.y;
+  const dot = abx*cbx + aby*cby;
+  const ab = Math.hypot(abx,aby);
+  const cb = Math.hypot(cbx,cby);
+  if(ab < 1e-6 || cb < 1e-6) return 0;
+  let cos = dot/(ab*cb);
+  cos = Math.max(-1, Math.min(1, cos));
+  return Math.acos(cos) * (180/Math.PI);
+}
+function rotateAround(pt, center, deg){
+  const rad = deg * Math.PI/180;
+  const s = Math.sin(rad), c = Math.cos(rad);
+  const x = pt.x - center.x;
+  const y = pt.y - center.y;
+  return { x:center.x + x*c - y*s, y:center.y + x*s + y*c };
+}
+
+function enforceBoneLength(a,b, stiffness){
+  const targetLen = REST[`${a}|${b}`];
+  if(!targetLen) return;
+
+  const ax = joints[a].x, ay = joints[a].y;
+  const bx = joints[b].x, by = joints[b].y;
+
+  const dx = bx - ax;
+  const dy = by - ay;
+  const d = Math.hypot(dx,dy) || 1;
+
+  const diff = (d - targetLen) / d;
+  const moveX = dx * diff * 0.5 * stiffness;
+  const moveY = dy * diff * 0.5 * stiffness;
+
+  joints[a].x += moveX; joints[a].y += moveY;
+  joints[b].x -= moveX; joints[b].y -= moveY;
+}
+
+function enforceAngleLimit(parent, joint, child, minDeg, maxDeg, stiffness){
+  const P = joints[parent], J = joints[joint], C = joints[child];
+  const ang = angleDeg(P,J,C);
+  if(ang >= minDeg && ang <= maxDeg) return;
+
+  const target = clamp(ang, minDeg, maxDeg);
+  const delta = (target - ang);
+  const applied = delta * 0.6 * stiffness;
+
+  const v1x = P.x - J.x, v1y = P.y - J.y;
+  const v2x = C.x - J.x, v2y = C.y - J.y;
+  const cross = v1x*v2y - v1y*v2x;
+  const sign = (cross >= 0) ? 1 : -1;
+
+  const rotated = rotateAround(C, J, applied * sign);
+  joints[child].x = rotated.x;
+  joints[child].y = rotated.y;
+}
+
+function applyConstraints(draggedKey){
+  const stiffness = clamp(Number(realismSlider.value)/100, 0, 1);
+  const iterations = Math.round(4 + stiffness * 10);
+
+  for(let it=0; it<iterations; it++){
+    for(const [a,b] of BONES) enforceBoneLength(a,b, stiffness);
+    for(const [p,j,c,minA,maxA] of ANGLE_LIMITS) enforceAngleLimit(p,j,c,minA,maxA, stiffness);
+
+    if(symmetryToggle.checked && draggedKey){
+      applySymmetry(draggedKey);
+    }
+  }
+}
+
+/* =========================
+   Symmetry
+========================= */
+function mirrorPair(source, target){
+  const centerX = (joints.lShoulder.x + joints.rShoulder.x) / 2;
+  const dx = joints[source].x - centerX;
+  joints[target].x = centerX - dx;
+  joints[target].y = joints[source].y;
+}
+function applySymmetry(k){
+  if(!symmetryToggle.checked) return;
+  const map = {
+    lShoulder:"rShoulder", rShoulder:"lShoulder",
+    lElbow:"rElbow", rElbow:"lElbow",
+    lWrist:"rWrist", rWrist:"lWrist",
+    lHip:"rHip", rHip:"lHip",
+    lKnee:"rKnee", rKnee:"lKnee",
+    lAnkle:"rAnkle", rAnkle:"lAnkle"
+  };
+  const other = map[k];
+  if(!other) return;
+  mirrorPair(k, other);
+}
+
+/* =========================
+   Draw
+========================= */
+function draw(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  // bones
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--cyan').trim() || "#00ffff";
+  for(const [a,b] of BONES){
+    ctx.beginPath();
+    ctx.moveTo(joints[a].x, joints[a].y);
+    ctx.lineTo(joints[b].x, joints[b].y);
+    ctx.stroke();
+  }
+
+  // joints
+  for(const k in joints){
+    ctx.beginPath();
+    ctx.arc(joints[k].x, joints[k].y, 7, 0, Math.PI*2);
+    ctx.fillStyle = "#22c55e";
+    ctx.fill();
+  }
+
+  // angle info
+  ctx.fillStyle = "rgba(255,255,255,0.82)";
+  ctx.font = "12px Arial";
+  const le = Math.round(angleDeg(joints.lShoulder, joints.lElbow, joints.lWrist));
+  const re = Math.round(angleDeg(joints.rShoulder, joints.rElbow, joints.rWrist));
+  const lk = Math.round(angleDeg(joints.lHip, joints.lKnee, joints.lAnkle));
+  const rk = Math.round(angleDeg(joints.rHip, joints.rKnee, joints.rAnkle));
+  ctx.fillText(`Elbow L/R: ${le}° / ${re}°`, 12, 18);
+  ctx.fillText(`Knee  L/R: ${lk}° / ${rk}°`, 12, 34);
+}
+
+/* =========================
+   Pointer (mouse + touch)
+========================= */
+function getPointerPos(evt){
+  const r = canvas.getBoundingClientRect();
+  const clientX = evt.touches ? evt.touches[0].clientX : evt.clientX;
+  const clientY = evt.touches ? evt.touches[0].clientY : evt.clientY;
+  const sx = canvas.width / r.width;
+  const sy = canvas.height / r.height;
+  return { x:(clientX - r.left)*sx, y:(clientY - r.top)*sy };
+}
+function startDrag(evt){
+  const p = getPointerPos(evt);
+  for(const k in joints){
+    if(Math.hypot(joints[k].x - p.x, joints[k].y - p.y) < 12){
+      dragging = k;
+      break;
+    }
+  }
+}
+function doDrag(evt){
+  if(!dragging) return;
+  evt.preventDefault();
+
+  const p = getPointerPos(evt);
+  joints[dragging].x = p.x;
+  joints[dragging].y = p.y;
+
+  if(symmetryToggle.checked) applySymmetry(dragging);
+  applyConstraints(dragging);
+  draw();
+}
+function endDrag(){ dragging = null; }
+
+canvas.addEventListener("mousedown", startDrag);
+window.addEventListener("mousemove", doDrag);
+window.addEventListener("mouseup", endDrag);
+
+canvas.addEventListener("touchstart", startDrag, {passive:false});
+window.addEventListener("touchmove", doDrag, {passive:false});
+window.addEventListener("touchend", endDrag);
+
+/* =========================
+   Feature extraction + weights
+========================= */
+function computeFeatures(){
+  const lElbowAng = angleDeg(joints.lShoulder, joints.lElbow, joints.lWrist);
+  const rElbowAng = angleDeg(joints.rShoulder, joints.rElbow, joints.rWrist);
+
+  const lElbowStraight = clamp((lElbowAng - 90)/90, 0, 1);
+  const rElbowStraight = clamp((rElbowAng - 90)/90, 0, 1);
+
+  const lKneeAng = angleDeg(joints.lHip, joints.lKnee, joints.lAnkle);
+  const rKneeAng = angleDeg(joints.rHip, joints.rKnee, joints.rAnkle);
+
+  const squat = clamp(((180 - lKneeAng) + (180 - rKneeAng))/180, 0, 1);
+
+  const lhUp = clamp((joints.lShoulder.y - joints.lWrist.y)/140, 0, 1);
+  const rhUp = clamp((joints.rShoulder.y - joints.rWrist.y)/140, 0, 1);
+
+  const shoulderWidth = Math.abs(joints.rShoulder.x - joints.lShoulder.x) || 1;
+  const lw = Math.abs(joints.lWrist.x - joints.lShoulder.x) / shoulderWidth;
+  const rw = Math.abs(joints.rWrist.x - joints.rShoulder.x) / shoulderWidth;
+  const armsWide = clamp(((lw + rw)/2 - 0.3)/1.0, 0, 1);
+
+  return {
+    lhUp:+lhUp.toFixed(2),
+    rhUp:+rhUp.toFixed(2),
+    armsWide:+armsWide.toFixed(2),
+    squat:+squat.toFixed(2),
+    lElbowStraight:+lElbowStraight.toFixed(2),
+    rElbowStraight:+rElbowStraight.toFixed(2)
+  };
+}
+function autoWeights(target){
+  return {
+    lhUp: target.lhUp > 0.6 ? 2.5 : 1.0,
+    rhUp: target.rhUp > 0.6 ? 2.5 : 1.0,
+    armsWide: target.armsWide > 0.6 ? 2.2 : 1.0,
+    squat: target.squat > 0.5 ? 2.8 : 1.0,
+    lElbowStraight: target.lElbowStraight > 0.7 ? 1.8 : 0.8,
+    rElbowStraight: target.rElbowStraight > 0.7 ? 1.8 : 0.8
+  };
+}
+
+/* =========================
+   Modal: auto-key + validation
+========================= */
+let modalMode = "generate"; // "generate" | "save"
+let keyManuallyEdited = false;
+
+function slugifyToKey(str){
+  return (str || "")
+    .trim()
+    .toLowerCase()
+    .replace(/['"]/g, "")
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
+function clearErrors(){
+  [errName, errKey, errDesc].forEach(el => { el.style.display="none"; el.textContent=""; });
+  [poseName, poseKey, poseDesc].forEach(el => el.classList.remove("inputBad"));
+}
+function setError(inputEl, errEl, msg){
+  inputEl.classList.add("inputBad");
+  errEl.textContent = msg;
+  errEl.style.display = "block";
+}
+
+poseKey.addEventListener("input", ()=>{ keyManuallyEdited = true; });
+
+poseName.addEventListener("input", ()=>{
+  const nameVal = (poseName.value || "").trim();
+  if(!keyManuallyEdited || !poseKey.value.trim()){
+    poseKey.value = slugifyToKey(nameVal);
+  }
+});
+
+function openPoseModal(mode){
+  modalMode = mode;
+  poseModalTitle.textContent = (mode === "save") ? "Save Pose" : "Generate Pose Object";
+  confirmPoseModal.textContent = (mode === "save") ? "Save" : "Generate";
+  clearErrors();
+
+  // If opening fresh, focus name (and allow auto-key)
+  keyManuallyEdited = !!poseKey.value.trim();
+  poseModal.style.display = "flex";
+  setTimeout(()=> poseName.focus(), 60);
+}
+function closePoseModalFn(){
+  poseModal.style.display = "none";
+}
+
+closePoseModal.onclick = closePoseModalFn;
+cancelPoseModal.onclick = closePoseModalFn;
+poseModal.addEventListener("click", (e)=>{ if(e.target === poseModal) closePoseModalFn(); });
+
+[poseKey, poseName].forEach(el=>{
+  el.addEventListener("keydown", (e)=>{
+    if(e.key === "Enter"){
+      e.preventDefault();
+      confirmPoseModal.click();
+    }
+  });
+});
+poseDesc.addEventListener("keydown", (e)=>{
+  if(e.key === "Enter" && e.ctrlKey){
+    e.preventDefault();
+    confirmPoseModal.click();
+  }
+});
+
+function validatePoseForm(){
+  clearErrors();
+
+  const name = (poseName.value || "").trim();
+  const key = slugifyToKey(poseKey.value);
+  const desc = (poseDesc.value || "").trim();
+
+  let ok = true;
+
+  if(!name){
+    ok = false;
+    setError(poseName, errName, "Pose name is required.");
+  }
+
+  if(!key){
+    ok = false;
+    setError(poseKey, errKey, "Key is required (auto-filled from name).");
+  }else if(!/^[a-z0-9_]+$/.test(key)){
+    ok = false;
+    setError(poseKey, errKey, "Key can contain only a-z, 0-9 and underscore.");
+  }
+
+  if(desc.length < 6){
+    ok = false;
+    setError(poseDesc, errDesc, "Description should be at least 6 characters.");
+  }
+
+  // normalize
+  poseKey.value = key;
+
+  return ok ? { key, name, desc } : null;
+}
+
+confirmPoseModal.onclick = ()=>{
+  const form = validatePoseForm();
+  if(!form) return;
+
+  const target = computeFeatures();
+  const weight = autoWeights(target);
+
+  const obj = { key:form.key, name:form.name, desc:form.desc, target, weight };
+
+  if(modalMode === "generate"){
+    outputEl.value = JSON.stringify(obj, null, 2);
+    showToast("Pose object generated.", "ok", 1800);
+  }else{
+    const thumbnail = canvas.toDataURL("image/png");
+    upsertSavedPose({ ...obj, thumbnail });
+    outputEl.value = JSON.stringify(savedPoses.map(stripForExport), null, 2);
+    showToast("Pose saved to local storage.", "ok", 1800);
+  }
+
+  closePoseModalFn();
+};
+
+/* =========================
+   Saved poses: localStorage
+========================= */
+function stripForExport(p){
+  // exported format for PoseMatch app (no thumbnail needed there)
+  return { key:p.key, name:p.name, desc:p.desc, target:p.target, weight:p.weight, thumbnail: p.thumbnail || null };
+}
+
+function loadSavedPoses(){
+  try{
+    const raw = localStorage.getItem(STORAGE_SAVED);
+    if(!raw) return [];
+    const arr = JSON.parse(raw);
+    if(!Array.isArray(arr)) return [];
+    // sanitize minimal fields
+    return arr
+      .filter(p => p && p.key && p.name && p.target && p.weight)
+      .map(p => ({
+        key:String(p.key),
+        name:String(p.name),
+        desc:String(p.desc || ""),
+        target:p.target,
+        weight:p.weight,
+        thumbnail:String(p.thumbnail || "")
+      }));
+  }catch(e){
+    return [];
+  }
+}
+
+function persistSavedPoses(){
+  localStorage.setItem(STORAGE_SAVED, JSON.stringify(savedPoses));
+}
+
+function upsertSavedPose(pose){
+  const idx = savedPoses.findIndex(x => x.key === pose.key);
+  if(idx >= 0) savedPoses[idx] = pose;
+  else savedPoses.push(pose);
+
+  // stable ordering
+  savedPoses.sort((a,b)=> (a.name||"").localeCompare(b.name||""));
+  persistSavedPoses();
+}
+
+function deleteSavedPoseByKey(key){
+  const before = savedPoses.length;
+  savedPoses = savedPoses.filter(p => p.key !== key);
+  const after = savedPoses.length;
+  persistSavedPoses();
+  return before !== after;
+}
+
+/* =========================
+   Saved poses modal rendering
+========================= */
+function openSavedModal(){
+  renderSavedModal();
+  savedModal.style.display = "flex";
+}
+function closeSavedModalFn(){
+  savedModal.style.display = "none";
+}
+closeSavedModal.onclick = closeSavedModalFn;
+savedModal.addEventListener("click", (e)=>{ if(e.target === savedModal) closeSavedModalFn(); });
+
+function renderSavedModal(){
+  savedGrid.innerHTML = "";
+  savedCount.textContent = String(savedPoses.length);
+
+  if(savedPoses.length === 0){
+    savedEmpty.style.display = "block";
+    return;
+  }
+  savedEmpty.style.display = "none";
+
+  for(const p of savedPoses){
+    const card = document.createElement("div");
+    card.className = "poseCard";
+
+    const img = document.createElement("img");
+    img.className = "poseThumb";
+    img.alt = p.name;
+    img.src = p.thumbnail || "";
+    card.appendChild(img);
+
+    const meta = document.createElement("div");
+    meta.className = "poseMeta";
+    meta.innerHTML = `
+      <div class="poseName" title="${escapeHtml(p.name)}">${escapeHtml(p.name)}</div>
+      <div class="poseKey mono">${escapeHtml(p.key)}</div>
+      <div class="poseDesc" title="${escapeHtml(p.desc || "")}">${escapeHtml(p.desc || "")}</div>
+    `;
+    card.appendChild(meta);
+
+    const actions = document.createElement("div");
+    actions.className = "poseActions";
+
+    const del = document.createElement("button");
+    del.className = "miniBtn dangerMini";
+    del.innerHTML = "🗑️ Delete";
+    del.onclick = ()=>{
+      const ok = deleteSavedPoseByKey(p.key);
+      if(ok){
+        showToast(`Deleted "${p.name}".`, "ok", 1600);
+        renderSavedModal();
+        outputEl.value = JSON.stringify(savedPoses.map(stripForExport), null, 2);
+      }
+    };
+
+    const copy = document.createElement("button");
+    copy.className = "miniBtn";
+    copy.textContent = "Copy JSON";
+    copy.onclick = async ()=>{
+      const one = stripForExport(p);
+      const txt = JSON.stringify(one, null, 2);
+      outputEl.value = txt;
+      try{
+        await navigator.clipboard.writeText(txt);
+        showToast("Copied pose JSON.", "ok", 1500);
+      }catch{
+        showToast("Copied to editor. (Clipboard blocked by browser)", "warn", 2200);
+      }
+    };
+
+    actions.appendChild(copy);
+    actions.appendChild(del);
+    card.appendChild(actions);
+
+    savedGrid.appendChild(card);
+  }
+}
+
+function escapeHtml(s){
+  return String(s)
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+}
+
+/* =========================
+   Load to PoseMatch app
+========================= */
+function loadToApp(){
+  const payload = savedPoses.map(stripForExport);
+  if(!payload.length){
+    showToast("No saved poses to load. Save at least one pose first.", "warn", 2600);
+    return;
+  }
+  localStorage.setItem(LOAD_KEY, JSON.stringify(payload));
+  window.open("index.html", "_blank");
+  showToast(`Loaded ${payload.length} pose(s) to app.`, "ok", 2000);
+}
+
+/* =========================
+   Export JSON
+========================= */
+function exportJson(){
+  const payload = savedPoses.map(stripForExport);
+  if(!payload.length){
+    showToast("Nothing to export. Save a pose first.", "warn", 2400);
+    return;
+  }
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "pose_library.json";
+  a.click();
+}
+
+/* =========================
+   Buttons wiring
+========================= */
+realismSlider.addEventListener("input", ()=>{ realismVal.textContent = `${realismSlider.value}%`; });
+
+resetBtn.onclick = ()=>{
+  joints = getDefaultPose();
+  rebuildRestLengths();
+  draw();
+  showToast("Reset pose.", "ok", 1200);
+};
+
+generateBtn.onclick = ()=> openPoseModal("generate");
+saveBtn.onclick = ()=> openPoseModal("save");
+viewSavedBtn.onclick = openSavedModal;
+
+mirrorBtn.onclick = ()=>{
+  const centerX = (joints.lShoulder.x + joints.rShoulder.x) / 2;
+  const mirrored = JSON.parse(JSON.stringify(joints));
+  for(const k in mirrored){
+    mirrored[k].x = 2*centerX - mirrored[k].x;
+  }
+
+  // swap L/R labels so semantics flip
+  const swapPairs = [
+    ["lShoulder","rShoulder"],
+    ["lElbow","rElbow"],
+    ["lWrist","rWrist"],
+    ["lHip","rHip"],
+    ["lKnee","rKnee"],
+    ["lAnkle","rAnkle"]
+  ];
+  for(const [l,r] of swapPairs){
+    const tmp = mirrored[l]; mirrored[l] = mirrored[r]; mirrored[r] = tmp;
+  }
+
+  joints = mirrored;
+  rebuildRestLengths();
+  applyConstraints(null);
+  draw();
+  showToast("Mirrored pose.", "ok", 1400);
+};
+
+exportBtn.onclick = exportJson;
+savedExportBtn.onclick = exportJson;
+
+loadToAppBtn.onclick = loadToApp;
+savedLoadToAppBtn.onclick = loadToApp;
+
+/* =========================
+   Init
+========================= */
+realismVal.textContent = `${realismSlider.value}%`;
+draw();
+
+// show saved list in editor initially (optional)
+if(savedPoses.length){
+  outputEl.value = JSON.stringify(savedPoses.map(stripForExport), null, 2);
+}
+
+// back button → go to index
+document.getElementById("backBtn")
+  .addEventListener("click", () => {
+    window.location.href = "index.html";
+  });
+</script>
+</body>
+</html>
