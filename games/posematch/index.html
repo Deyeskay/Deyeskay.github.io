@@ -1,4 +1,4 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -120,8 +120,9 @@
       width:min(320px, 72vw);
       border-radius:16px;
       border:1px solid var(--border);
-      background:var(--panel2);
-      backdrop-filter: blur(10px);
+	  background: rgb(15 20 28 / 60%);
+      /*background:var(--panel2);*/
+      backdrop-filter: blur(5px);
       box-shadow:var(--shadow);
       padding:12px;
     }
@@ -247,8 +248,8 @@
 
     .toast{
       position:fixed;left:50%;transform:translateX(-50%);
-      bottom:86px;
-      background:rgba(10, 14, 20, 0.86);
+      bottom:186px;
+      background:rgba(10, 14, 20, 0.50);
       border:1px solid var(--border);
       color:var(--text);
       padding:10px 12px;border-radius:14px;
@@ -286,6 +287,288 @@
       background: linear-gradient(180deg, rgba(88,215,255,0.22), rgba(88,215,255,0.10));
     }
     .mono{ font-variant-numeric: tabular-nums; }
+
+    /* ==============================
+       ✅ NEW: Full-screen Round Overlay Animations
+       ============================== */
+    .round-overlay{
+      position:absolute;
+      inset:0;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      z-index:40; /* below toast(60), above HUD/video */
+      pointer-events:none; /* never blocks gameplay */
+    }
+    .round-overlay.show{ display:flex; }
+
+    .round-overlay .back{
+      position:absolute; inset:0;
+      background:rgba(0,0,0,0.88);
+      backdrop-filter: blur(2px);
+      opacity:0;
+      animation: ro_back_in 650ms ease forwards;
+    }
+    @keyframes ro_back_in{
+      0%{ opacity:0; }
+      20%{ opacity:0.95; }
+      100%{ opacity:0; }
+    }
+
+    .round-overlay .content{
+      position:relative;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:12px;
+      transform:scale(0.92);
+      opacity:0;
+      animation: ro_pop 650ms cubic-bezier(.2,.9,.2,1) forwards;
+      text-align:center;
+      padding:18px 16px;
+      border-radius:20px;
+      border:1px solid rgba(255,255,255,0.14);
+      background:rgba(20, 24, 32, 0.25);
+      box-shadow:0 18px 44px rgba(0,0,0,0.45);
+      max-width:min(92vw, 520px);
+    }
+    @keyframes ro_pop{
+      0%{ transform:scale(0.88); opacity:0; }
+      20%{ transform:scale(1.02); opacity:1; }
+      70%{ transform:scale(1.00); opacity:1; }
+      100%{ transform:scale(0.98); opacity:0; }
+    }
+
+    .ro-icon{
+      width:110px;height:110px;
+      display:flex;align-items:center;justify-content:center;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,0.14);
+      background:rgba(255,255,255,0.06);
+      box-shadow:0 10px 28px rgba(0,0,0,0.35);
+    }
+    .ro-title{
+      font-weight:1000;
+      letter-spacing:0.3px;
+      font-size:22px;
+      margin:0;
+    }
+    .ro-sub{
+      margin:0;
+      color:var(--muted);
+      font-weight:800;
+      font-size:13px;
+      line-height:1.25;
+    }
+
+    /* SVG stroke animations */
+    .ro-svg{
+      width:74px;height:74px;
+    }
+    .ro-path{
+      fill:none;
+      stroke-linecap:round;
+      stroke-linejoin:round;
+      stroke-width:10;
+      stroke-dasharray:240;
+      stroke-dashoffset:240;
+      animation: ro_draw 520ms ease forwards;
+    }
+    @keyframes ro_draw{
+      to{ stroke-dashoffset:0; }
+    }
+
+    /* Variants */
+    .round-overlay[data-type="success"] .ro-title{ color:var(--good); }
+    .round-overlay[data-type="success"] .ro-path{ stroke:var(--good); }
+
+    .round-overlay[data-type="timeup"] .ro-title{ color:var(--warn); }
+    .round-overlay[data-type="timeup"] .ro-path{ stroke:var(--warn); }
+
+    .round-overlay[data-type="skip"] .ro-title{ color:var(--bad); }
+    .round-overlay[data-type="skip"] .ro-path{ stroke:var(--bad); }
+
+    /* Small pulse ring behind icon */
+    .ro-ring{
+      position:absolute;
+      width:140px;height:140px;
+      border-radius:999px;
+      border:2px solid rgba(255,255,255,0.10);
+      opacity:0;
+      animation: ro_ring 650ms ease forwards;
+      filter: blur(0.2px);
+    }
+    @keyframes ro_ring{
+      0%{ transform:scale(0.72); opacity:0; }
+      25%{ opacity:0.55; }
+      100%{ transform:scale(1.25); opacity:0; }
+    }
+	
+/* =========================
+   HUD layout changes
+   ========================= */
+
+/* top-left stays */
+.hud-top-left{
+  top:14px;
+  left:14px;
+  max-width:none;
+}
+
+/* top-right minimal card */
+.pose-card-min{
+  width:min(240px, 62vw);
+  padding:10px;
+}
+.pose-card-min .pose-thumb-wrap{
+  height:96px;
+  margin:8px 0 0;
+}
+
+/* hide mode badge + threshold line inside pose card */
+#modeBadge{ display:none !important; }
+#thresholdWrap{ display:none !important; }
+
+/* bottom-center stack like screenshot */
+.hud-bottom-center{
+  position:absolute;
+  width: 100%;
+  left:50%;
+  bottom:96px; /* sits above your bottom buttons */
+  transform:translateX(-50%);
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  align-items:center;
+  pointer-events:none;
+}
+
+.hud-bottom-center .pill{
+  pointer-events:none;
+  min-width:min(320px, 86vw);
+  justify-content:flex-start;
+  padding:12px 14px;
+  border-radius:999px;
+  background:rgba(10, 14, 20, 0.72);
+  border:1px solid rgba(255,255,255,0.10);
+  box-shadow:0 10px 26px rgba(0,0,0,0.45);
+}
+
+/* Pose description pill look */
+.pose-desc-pill{
+  text-align:center;
+  justify-content:center !important;
+  font-weight:900;
+  color:var(--muted);
+}
+
+/* =========================
+   Left vertical match meter
+   Uses rotate trick so JS width still works
+   ========================= */
+.match-meter{
+  position:absolute;
+  left:14px;
+  top:50%;
+  transform:translateY(-50%);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:8px;
+  pointer-events:none;
+  z-index:5;
+  border-radius: 34px;
+    background: #0f141cb8;
+    padding: 12px 3px;
+}
+
+/* rotate a horizontal bar to look vertical */
+.vbar-wrap{
+  width:28px;
+  height:200px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.vbar{
+  width:200px;          /* becomes height visually after rotate */
+  height:12px;
+  transform:rotate(-90deg);
+  transform-origin:center;
+  border-radius:999px;
+  background:rgba(255,255,255,0.10);
+  border:1px solid rgba(255,255,255,0.10);
+  overflow:hidden;
+}
+
+.vbar > div{
+  height:100%;
+  width:0%;
+  border-radius:999px;
+  transition:width 120ms linear;
+  background:linear-gradient(90deg, rgba(88,215,255,0.85), rgba(34,197,94,0.85));
+}
+
+.vbar-pct{
+  font-weight:1000;
+  font-size:13px;
+  opacity:0.95;
+}
+
+/* FIX: stop original .bar flex rules from shrinking the rotated bar */
+.vbar{
+  flex: 0 0 auto !important;   /* overrides .bar { flex:1 } */
+  flex-grow: 0 !important;
+  flex-shrink: 0 !important;
+  width: 240px !important;     /* this becomes the VISUAL height after rotate */
+  height: 12px !important;
+}
+
+/* make the wrapper allow the rotated element to be tall */
+.vbar-wrap{
+  width: 28px !important;
+  height: 240px !important;    /* should match vbar width for nice fit */
+  overflow: visible !important;
+}
+
+/* =========================
+   Bottom buttons: minimal round
+   ========================= */
+.bottom-controls-min{
+  width:auto !important;
+  padding:10px !important;
+  border-radius:999px !important;
+  gap:12px !important;
+  justify-content:center;
+}
+
+.round-btn{
+  width:56px;
+  height:56px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,0.12);
+  background:rgba(255,255,255,0.06);
+  color:var(--text);
+  font-weight:1000;
+  font-size:20px;
+  cursor:pointer;
+  -webkit-tap-highlight-color: transparent;
+  box-shadow:0 10px 24px rgba(0,0,0,0.35);
+}
+
+.round-btn:active{ transform:scale(0.98); }
+
+.round-btn.danger{
+  border-color: rgba(239,68,68,0.30);
+  background:rgba(239,68,68,0.12);
+}
+
+/* make existing old bottom-controls not stretch */
+.hud-bottom{
+  bottom:18px;
+}
+	
   </style>
 </head>
 
@@ -294,7 +577,7 @@
   <section id="startScreen" class="screen active">
     <div class="start-card">
       <div class="topbar">
-	    <button class="icon-btn" id="openPoseCreatorBtn" aria-label="Pose Creator" title="Pose Creator">➕</button>
+        <button class="icon-btn" id="openPoseCreatorBtn" aria-label="Pose Creator" title="Pose Creator">➕</button>
         <button class="icon-btn" id="openSettingsBtn" aria-label="Settings" title="Settings">⚙️</button>
       </div>
       <h1 class="title">Pose Match</h1>
@@ -313,50 +596,79 @@
       <video id="video" playsinline muted></video>
       <canvas id="overlay"></canvas>
 
-      <div class="hud">
-        <div class="hud-top-left">
-          <div class="pill">⏱️ Total: <span class="mono" id="totalTimeLbl">02:00</span></div>
-          <div class="pill" id="intervalPill" style="display:none;">
-            ⏳ Pose time: <span class="mono" id="intervalTimeLbl">00:15</span>
-            <span id="bankLbl" style="color:var(--muted); font-weight:900;"></span>
+      <!-- ✅ NEW: Round feedback overlay -->
+      <div id="roundOverlay" class="round-overlay" data-type="success" aria-hidden="true">
+        <div class="back"></div>
+        <div class="content">
+          <div class="ro-ring"></div>
+          <div class="ro-icon" id="roIcon">
+            <!-- icon svg injected by JS -->
           </div>
-          <div class="pill">🧮 Score: <span class="mono" id="scoreLbl">0</span></div>
-        </div>
-
-        <div class="hud-top-right">
-          <div class="pose-card">
-            <div class="pose-title">
-              <span>📌 Pose: <span id="poseName">—</span></span>
-              <span id="modeBadge" style="font-weight:900; color:var(--muted); font-size:12px;">MODE</span>
-            </div>
-
-            <!-- ✅ NEW: thumbnail block -->
-            <div class="pose-thumb-wrap">
-              <img id="poseThumb" alt="pose thumbnail" />
-              <div id="poseThumbNA">NA</div>
-            </div>
-
-            <p class="pose-desc" id="poseDesc">—</p>
-
-            <div class="match-row">
-              <div class="bar"><div id="matchBar"></div></div>
-              <div class="match-pct mono" id="matchPct">0%</div>
-            </div>
-
-            <p class="pose-desc" style="margin-top:10px;">
-              Match threshold: <b class="mono" id="thresholdLbl">75%</b>
-            </p>
-          </div>
-        </div>
-
-        <div class="hud-bottom">
-          <div class="bottom-controls">
-            <button class="secondary-btn" id="endBtn">End</button>
-            <button class="danger-btn" id="skipBtn">Skip Pose</button>
-          </div>
+          <p class="ro-title" id="roTitle">Success!</p>
+          <p class="ro-sub" id="roSub">Next pose…</p>
         </div>
       </div>
-    </div>
+
+		<div class="hud">
+
+		  <!-- TOP LEFT: ONLY TOTAL -->
+		  <div class="hud-top-left">
+			<div class="pill">⏱️ Total: <span class="mono" id="totalTimeLbl">02:00</span></div>
+			<div class="pill">🧮 Score: <span class="mono" id="scoreLbl">0</span></div>
+		  </div>
+
+		  <!-- LEFT EDGE: VERTICAL MATCH METER -->
+		  <div class="match-meter" aria-hidden="true">
+			<div class="vbar-wrap">
+			  <div class="bar vbar"><div id="matchBar"></div></div>
+			</div>
+			<div class="vbar-pct mono" id="matchPct">0%</div>
+		  </div>
+
+		  <!-- TOP RIGHT: MINIMAL POSE CARD -->
+		  <div class="hud-top-right">
+			<div class="pose-card pose-card-min">
+			  <div class="pose-title">
+				<span>🤸 <span id="poseName">—</span></span>
+				<span id="modeBadge">MODE</span>
+			  </div>
+
+			  <div class="pose-thumb-wrap">
+				<img id="poseThumb" alt="pose thumbnail" />
+				<div id="poseThumbNA">NA</div>
+			  </div>
+
+			  <!-- keep this line present to not break anything, but it will be hidden by CSS -->
+			  <p class="pose-desc" id="thresholdWrap">
+				Match threshold: <b class="mono" id="thresholdLbl">75%</b>
+			  </p>
+			</div>
+		  </div>
+
+		  <!-- BOTTOM CENTER: POSE DESC + POSE TIME + SCORE -->
+		  <div class="hud-bottom-center">
+
+			<div class=" " id="intervalPill" style="display:none;text-align: center;justify-content: center !important;font-weight: bold;">
+			  ⏳ Next Pose: <span class="mono" id="intervalTimeLbl">00:15</span>
+			  <span id="bankLbl" style="color:var(--muted); font-weight:900;"></span>
+			</div>
+			 
+			<div class="pill pose-desc-pill" style="width: 100%;border-radius: 0;" id="poseDesc">—</div>
+
+		  </div>
+
+		  <!-- BOTTOM RIGHT: MINIMAL ROUND BUTTONS -->
+		  <div class="hud-bottom">
+			<div class="bottom-controls bottom-controls-min">
+			  <button class="round-btn" id="endBtn" title="End">⏹</button>
+			  <button class="round-btn danger" id="skipBtn" title="Skip Pose">⏭</button>
+			</div>
+		  </div>
+
+		</div>
+
+
+     </div>
   </section>
 
   <!-- END SCREEN -->
@@ -472,6 +784,86 @@
       $("gameScreen").classList.remove("active");
       $("endScreen").classList.remove("active");
       $(id).classList.add("active");
+    }
+
+    /***********************
+     *  ✅ NEW: Round overlay helper
+     ***********************/
+    const RO = {
+      el: null,
+      title: null,
+      sub: null,
+      icon: null,
+      tmr: null,
+      busyUntil: 0
+    };
+
+    function roSvgFor(type){
+      // single clean icon each
+      if(type === "success"){
+        return `
+          <svg class="ro-svg" viewBox="0 0 64 64" aria-hidden="true">
+            <path class="ro-path" d="M16 33 L28 45 L49 18"></path>
+          </svg>
+        `;
+      }
+      if(type === "timeup"){
+        return `
+          <svg class="ro-svg" viewBox="0 0 64 64" aria-hidden="true">
+            <path class="ro-path" d="M32 14 C22 14 14 22 14 32 C14 42 22 50 32 50 C42 50 50 42 50 32 C50 22 42 14 32 14"></path>
+            <path class="ro-path" style="stroke-dasharray:160;stroke-dashoffset:160;animation-duration:420ms" d="M32 22 L32 34 L40 38"></path>
+          </svg>
+        `;
+      }
+      // skip (X)
+      return `
+        <svg class="ro-svg" viewBox="0 0 64 64" aria-hidden="true">
+          <path class="ro-path" d="M20 20 L44 44"></path>
+          <path class="ro-path" style="stroke-dasharray:200;stroke-dashoffset:200;animation-duration:520ms;animation-delay:40ms" d="M44 20 L20 44"></path>
+        </svg>
+      `;
+    }
+
+    function vibrate(pattern){
+      try{
+        if(navigator.vibrate) navigator.vibrate(pattern);
+      }catch(e){}
+    }
+
+    function showRoundOverlay(type, opts={}){
+      // Prevent overlay spam (e.g., rapid success / skip taps)
+      const now = performance.now();
+      const minGap = 220; // ms
+      if(now < RO.busyUntil) return;
+      RO.busyUntil = now + minGap;
+
+      if(!RO.el){
+        RO.el = $("roundOverlay");
+        RO.title = $("roTitle");
+        RO.sub = $("roSub");
+        RO.icon = $("roIcon");
+      }
+
+      const duration = clamp(Number(opts.duration ?? 650), 350, 1400);
+
+      RO.el.setAttribute("data-type", type);
+      RO.title.textContent = opts.title || (type === "success" ? "Success!" : type === "timeup" ? "Time Up!" : "Skipped!");
+      RO.sub.textContent = opts.sub || (type === "success" ? "Next pose…" : type === "timeup" ? "Next pose…" : "Next pose…");
+      RO.icon.innerHTML = roSvgFor(type);
+
+      // retrigger animation by toggling class
+      RO.el.classList.remove("show");
+      // force reflow
+      void RO.el.offsetWidth;
+      RO.el.classList.add("show");
+
+      clearTimeout(RO.tmr);
+      RO.tmr = setTimeout(()=> RO.el.classList.remove("show"), duration);
+
+      // Optional haptics by type (subtle but noticeable)
+      if(type === "success") vibrate([25, 40, 25]);
+      else if(type === "timeup") vibrate([60]);
+      else if(type === "skip") vibrate([35, 45, 35]);
     }
 
     /***********************
@@ -1004,6 +1396,11 @@
           intervalRemaining = 0;
           bankSaved = 0;
           updateHUD();
+
+          // ✅ NEW: Full-screen feedback for time up
+          beep("skip");
+          showRoundOverlay("timeup", { title:"Time Up!", sub:"Next pose…" , duration: 650 });
+
           showToast("Time's up! Next pose.", "warn", 900);
           nextPose(true);
           return;
@@ -1034,6 +1431,14 @@
 
       score += settings.successScore;
       beep("success");
+
+      // ✅ NEW: Full-screen feedback for success
+      showRoundOverlay("success", {
+        title: "Success!",
+        sub: `+${settings.successScore} score`,
+        duration: 650
+      });
+
       showToast(`Success! +${settings.successScore}`, "good", 900);
 
       if(settings.mode === "score"){
@@ -1049,6 +1454,17 @@
 
       if(settings.skipPenaltyScore > 0) score = Math.max(0, score - settings.skipPenaltyScore);
       beep("skip");
+
+      // ✅ NEW: Full-screen feedback for manual skip
+      const sub = (settings.mode === "score")
+        ? `-${settings.skipPenaltyScore} score`
+        : `-${settings.skipPenaltyScore} score, -${settings.timeSkipPenaltySec}s`;
+
+      showRoundOverlay("skip", {
+        title: "Skipped!",
+        sub,
+        duration: 650
+      });
 
       if(settings.mode === "score"){
         bankSaved = 0;
@@ -1243,12 +1659,12 @@
       rebuildPoseLibrary();
       updateThresholdUI();
     })();
-	
-	// + button → open pose creator page
-	document.getElementById("openPoseCreatorBtn")
-	  .addEventListener("click", () => {
-		window.location.href = "pose_creator.html";
-	  });
+
+    // + button → open pose creator page
+    document.getElementById("openPoseCreatorBtn")
+      .addEventListener("click", () => {
+        window.location.href = "pose_creator.html";
+      });
   </script>
 </body>
 </html>
