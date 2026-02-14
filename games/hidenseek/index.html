@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+  <title>AR Room Scan Shooter (Browser MVP)</title>
+
+  <!-- Babylon.js + loaders + earcut (needed for polygon ops) -->
+  <script src="https://cdn.babylonjs.com/babylon.js"></script>
+  <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/earcut@2.2.4/dist/earcut.min.js"></script>
+
+  <style>
+    html, body { margin:0; height:100%; overflow:hidden; background:#000; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; }
+    #renderCanvas { width:100%; height:100%; touch-action:none; display:block; }
+
+    /* HUD */
+    .hud {
+      position: fixed; inset: 0;
+      pointer-events: none;
+      color: #fff;
+    }
+    .topbar {
+      position:absolute; left:12px; right:12px; top:10px;
+      display:flex; gap:10px; align-items:flex-start; justify-content:space-between;
+      pointer-events:none;
+    }
+    .card {
+      pointer-events:none;
+      background: rgba(0,0,0,0.55);
+      border: 1px solid rgba(255,255,255,0.16);
+      border-radius: 14px;
+      padding: 10px 12px;
+      backdrop-filter: blur(6px);
+      max-width: 70vw;
+    }
+    .title { font-weight: 700; font-size: 14px; margin:0 0 4px; }
+    .sub { font-size: 12px; opacity: 0.85; margin:0; line-height: 1.35; }
+
+    .buttons {
+      position:absolute; left:12px; right:12px; bottom:14px;
+      display:flex; gap:10px; flex-wrap:wrap; justify-content:center;
+      pointer-events:auto;
+    }
+    button {
+      border: 1px solid rgba(255,255,255,0.18);
+      background: rgba(0,0,0,0.65);
+      color:#fff;
+      padding: 12px 14px;
+      border-radius: 14px;
+      font-weight: 700;
+      font-size: 14px;
+      min-width: 128px;
+      touch-action: manipulation;
+    }
+    button:disabled { opacity:0.45; }
+    button.primary { background: rgba(20,140,255,0.65); border-color: rgba(20,140,255,0.75); }
+    button.danger { background: rgba(255,80,80,0.6); border-color: rgba(255,80,80,0.75); }
+
+    /* Crosshair */
+    #crosshair {
+      position:absolute; left:50%; top:50%;
+      transform: translate(-50%,-50%);
+      width: 18px; height: 18px;
+      border: 2px solid rgba(255,255,255,0.9);
+      border-radius: 50%;
+      box-shadow: 0 0 14px rgba(255,255,255,0.25);
+      display:none;
+      pointer-events:none;
+    }
+    #crosshair::after {
+      content:"";
+      position:absolute; left:50%; top:50%;
+      transform: translate(-50%,-50%);
+      width: 2px; height: 2px;
+      background: rgba(255,255,255,0.95);
+      border-radius: 50%;
+    }
+
+    /* Small stat pill */
+    .pill {
+      display:flex; gap:10px; align-items:center;
+      font-size:12px; opacity:0.9;
+    }
+    .pill span { padding: 4px 8px; border-radius: 999px; background: rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.12); }
+
+    /* Toast */
+    #toast {
+      position: absolute; left:50%; bottom:84px;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.7);
+      border: 1px solid rgba(255,255,255,0.16);
+      border-radius: 999px;
+      padding: 10px 14px;
+      font-size: 13px;
+      opacity: 0;
+      transition: opacity .2s ease;
+      pointer-events:none;
+      max-width: 90vw;
+      text-align:center;
+    }
+    #toast.show { opacity: 1; }
+
+    /* Mode badge */
+    #modeBadge { font-weight:800; letter-spacing:0.2px; }
+  </style>
+</head>
+<body>
+  <canvas id="renderCanvas"></canvas>
+
+  <div class="hud">
+    <div class="topbar">
+      <div class="card">
+        <p class="title"><span id="modeBadge">Idle</span> • AR Room Shooter</p>
+        <p id="hint" class="sub">Tap <b>Start AR</b> (Android Chrome + HTTPS). Then scan by tapping floor corners.</p>
+        <div class="pill" style="margin-top:8px;">
+          <span id="tracking">Tracking: —</span>
+          <span id="pointsCount">Points: 0</span>
+          <span id="botsCount">Bots: 0</span>
+        </div>
+      </div>
+
+      <div class="card" style="text-align:right;">
+        <p class="title" style="margin-bottom:6px;">Controls</p>
+        <p class="sub" id="controlsText">• Scan: tap floor to add corner<br/>• Undo: remove last corner<br/>• Finish: build walls<br/>• Play: walk IRL + tap to shoot</p>
+      </div>
+    </div>
+
+    <div id="crosshair"></div>
+    <div id="toast"></div>
+
+    <div class="buttons">
+      <button id="btnStartAR" class="primary">Start AR</button>
+      <button id="btnUndo" disabled>Undo Point</button>
+      <button id="btnFinish" disabled class="primary">Finish Scan</button>
+      <button id="btnRecenter" disabled>Recenter</button>
+      <button id="btnReset" disabled class="danger">Reset</button>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const canvas = document.getElementById("renderCanvas");
+  const engine = new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true });
+
+  // UI elems
+  const modeBadge = document.getElementById("modeBadge");
+  const hint = document.getElementById("hint");
+  const trackingEl = document.getElementById("tracking");
+  const pointsCountEl = document.getElementById("pointsCount");
+  const botsCountEl = document.getElementById("botsCount");
+  const crosshair = document.getElementById("crosshair");
+  const toast = document.getElementById("toast");
+
+  const btnStartAR = document.getElementById("btnStartAR");
+  const btnUndo = document.getElementById("btnUndo");
+  const btnFinish = document.getElementById("btnFinish");
+  const btnRecenter = document.getElementById("btnRecenter");
+  const btnReset = document.getElementById("btnReset");
+
+  const showToast = (msg, ms=1400) => {
+    toast.textContent = msg;
+    toast.classList.add("show");
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(() => toast.classList.remove("show"), ms);
+  };
+
+  // Game state
+  const STATE = { IDLE:"IDLE", SCAN:"SCAN", BUILD:"BUILD", PLAY:"PLAY" };
+  let state = STATE.IDLE;
+
+  // Babylon scene objects
+  let scene, light, xr;
+  let reticle;
+  let latestHitPose = null;
+  let hitTestFeature = null;
+
+  // Scan storage
+  let scanPoints = [];         // Vector3 world points
+  let scanMarkers = [];        // meshes for points
+  let scanLines = null;        // lines mesh
+  let floorY = 0;
+
+  // Level
+  const WALL_HEIGHT = 2.6;     // meters-ish
+  const WALL_THICK = 0.06;
+  let levelRoot = null;
+  let wallMeshes = [];
+
+  // Player / camera
+  let xrCamera = null;
+
+  // Bots
+  let bots = [];
+  let botRoot = null;
+  const BOT_COUNT_DEFAULT = 5;
+
+  // Utilities
+  const v2 = (x,z) => ({x, z});
+  const dist2 = (a,b) => Math.hypot(a.x-b.x, a.z-b.z);
+
+  function setState(next) {
+    state = next;
+    modeBadge.textContent = next === STATE.IDLE ? "Idle"
+                        : next === STATE.SCAN ? "Scan Mode"
+                        : next === STATE.BUILD ? "Building..."
+                        : "Play Mode";
+
+    if (next === STATE.IDLE) {
+      crosshair.style.display = "none";
+      hint.innerHTML = `Tap <b>Start AR</b> (Android Chrome + HTTPS). Then scan by tapping floor corners.`;
+    }
+    if (next === STATE.SCAN) {
+      crosshair.style.display = "none";
+      hint.innerHTML = `Scan: <b>tap the floor</b> around your room corners (polygon). Minimum <b>4</b> points.`;
+    }
+    if (next === STATE.PLAY) {
+      crosshair.style.display = "block";
+      hint.innerHTML = `Play: <b>walk in your room</b> to move. Tap to <b>shoot</b>.`;
+    }
+
+    updateButtons();
+  }
+
+  function updateButtons() {
+    const hasXR = !!xr;
+    btnStartAR.disabled = hasXR && xr.baseExperience?.state === BABYLON.WebXRState.IN_XR;
+    btnUndo.disabled = !(state === STATE.SCAN && scanPoints.length > 0);
+    btnFinish.disabled = !(state === STATE.SCAN && scanPoints.length >= 4);
+    btnRecenter.disabled = !(state === STATE.SCAN || state === STATE.PLAY);
+    btnReset.disabled = !(state !== STATE.IDLE);
+  }
+
+  function updateHUD() {
+    pointsCountEl.textContent = `Points: ${scanPoints.length}`;
+    botsCountEl.textContent = `Bots: ${bots.length}`;
+  }
+
+  function isWebXRSupported() {
+    return navigator.xr && navigator.xr.isSessionSupported;
+  }
+
+  // Sort points clockwise around centroid (x,z)
+  function sortPolygonPoints(points) {
+    const c = points.reduce((acc,p)=>({x:acc.x+p.x, z:acc.z+p.z}), {x:0,z:0});
+    c.x /= points.length; c.z /= points.length;
+    return points.slice().sort((a,b)=>Math.atan2(a.z-c.z,a.x-c.x) - Math.atan2(b.z-c.z,b.x-c.x));
+  }
+
+  // Point in polygon (x,z) ray casting
+  function pointInPoly(pt, poly) {
+    let inside = false;
+    for (let i=0,j=poly.length-1;i<poly.length;j=i++) {
+      const xi=poly[i].x, zi=poly[i].z;
+      const xj=poly[j].x, zj=poly[j].z;
+      const intersect = ((zi>pt.z)!==(zj>pt.z)) && (pt.x < (xj-xi)*(pt.z-zi)/((zj-zi)||1e-9) + xi);
+      if (intersect) inside = !inside;
+    }
+    return inside;
+  }
+
+  function polygonBounds(poly) {
+    let minX=Infinity, maxX=-Infinity, minZ=Infinity, maxZ=-Infinity;
+    for (const p of poly) { minX=Math.min(minX,p.x); maxX=Math.max(maxX,p.x); minZ=Math.min(minZ,p.z); maxZ=Math.max(maxZ,p.z); }
+    return {minX,maxX,minZ,maxZ};
+  }
+
+  function makeScene() {
+    scene = new BABYLON.Scene(engine);
+    scene.clearColor = new BABYLON.Color4(0,0,0,0);
+
+    // Light for visible meshes (walls/bots)
+    light = new BABYLON.HemisphericLight("hemi", new BABYLON.Vector3(0,1,0), scene);
+    light.intensity = 0.9;
+
+    // Root nodes
+    levelRoot = new BABYLON.TransformNode("levelRoot", scene);
+    botRoot = new BABYLON.TransformNode("botRoot", scene);
+
+    // Simple reticle (visible only in scan mode when hit is found)
+    reticle = BABYLON.MeshBuilder.CreateTorus("reticle", { thickness: 0.008, diameter: 0.16, tessellation: 28 }, scene);
+    reticle.rotation.x = Math.PI / 2;
+    reticle.isVisible = false;
+
+    // Materials
+    const retMat = new BABYLON.StandardMaterial("retMat", scene);
+    retMat.emissiveColor = new BABYLON.Color3(0.2, 0.8, 1.0);
+    retMat.alpha = 0.9;
+    reticle.material = retMat;
+
+    // Collisions (used in play mode)
+    scene.collisionsEnabled = true;
+
+    // Handle tap/pointer
+    scene.onPointerObservable.add((pointerInfo) => {
+      if (pointerInfo.type !== BABYLON.PointerEventTypes.POINTERDOWN) return;
+
+      if (state === STATE.SCAN) {
+        if (!latestHitPose) { showToast("Aim at the floor to find a surface"); return; }
+        addScanPoint(latestHitPose.position.clone());
+      } else if (state === STATE.PLAY) {
+        shoot();
+      }
+    });
+
+    setState(STATE.IDLE);
+    updateHUD();
+    return scene;
+  }
+
+  function addScanPoint(pos) {
+    // lock y to floorY once first point is set
+    if (scanPoints.length === 0) floorY = pos.y;
+    pos.y = floorY;
+
+    // Avoid super-close duplicates
+    const p2 = v2(pos.x, pos.z);
+    const last = scanPoints.length ? scanPoints[scanPoints.length-1] : null;
+    if (last) {
+      const l2 = v2(last.x, last.z);
+      if (dist2(p2, l2) < 0.12) { showToast("Point too close to previous"); return; }
+    }
+
+    scanPoints.push(pos);
+
+    const m = BABYLON.MeshBuilder.CreateSphere("pt", { diameter: 0.07 }, scene);
+    m.position.copyFrom(pos);
+    const mat = new BABYLON.StandardMaterial("ptMat", scene);
+    mat.emissiveColor = new BABYLON.Color3(0.9, 0.5, 1.0);
+    mat.alpha = 0.95;
+    m.material = mat;
+    scanMarkers.push(m);
+
+    redrawScanLines();
+    updateHUD();
+    updateButtons();
+
+    if (scanPoints.length === 4) showToast("Nice. Add more corners if needed, then Finish Scan.");
+  }
+
+  function undoScanPoint() {
+    if (!scanPoints.length) return;
+    scanPoints.pop();
+    const m = scanMarkers.pop();
+    if (m) m.dispose();
+    redrawScanLines();
+    updateHUD();
+    updateButtons();
+  }
+
+  function redrawScanLines() {
+    if (scanLines) scanLines.dispose();
+    if (scanPoints.length < 2) return;
+
+    const pts = scanPoints.map(p => p.clone());
+    // draw open polyline while scanning
+    scanLines = BABYLON.MeshBuilder.CreateLines("scanLines", { points: pts }, scene);
+    scanLines.color = new BABYLON.Color3(0.2, 0.8, 1.0);
+    scanLines.alpha = 0.9;
+  }
+
+  function clearScan() {
+    scanPoints = [];
+    scanMarkers.forEach(m => m.dispose());
+    scanMarkers = [];
+    if (scanLines) { scanLines.dispose(); scanLines = null; }
+    latestHitPose = null;
+    reticle.isVisible = false;
+    updateHUD();
+    updateButtons();
+  }
+
+  function clearLevel() {
+    wallMeshes.forEach(w => w.dispose());
+    wallMeshes = [];
+    if (levelRoot) levelRoot.getChildren().forEach(ch => ch.dispose());
+  }
+
+  function clearBots() {
+    bots.forEach(b => b.mesh.dispose());
+    bots = [];
+    if (botRoot) botRoot.getChildren().forEach(ch => ch.dispose());
+    updateHUD();
+  }
+
+  function buildLevelFromScan() {
+    setState(STATE.BUILD);
+
+    // Clean old
+    clearLevel();
+    clearBots();
+
+    // Sort polygon
+    const poly = sortPolygonPoints(scanPoints).map(p => v2(p.x, p.z));
+
+    // Create walls
+    const wallMat = new BABYLON.StandardMaterial("wallMat", scene);
+    wallMat.diffuseColor = new BABYLON.Color3(0.15, 0.15, 0.18);
+    wallMat.emissiveColor = new BABYLON.Color3(0.03, 0.03, 0.04);
+    wallMat.specularColor = new BABYLON.Color3(0.1,0.1,0.1);
+
+    for (let i=0; i<poly.length; i++) {
+      const a = poly[i];
+      const b = poly[(i+1) % poly.length];
+      const midX = (a.x+b.x)/2;
+      const midZ = (a.z+b.z)/2;
+      const len = dist2(a,b);
+
+      const wall = BABYLON.MeshBuilder.CreateBox(`wall_${i}`, {
+        width: len,
+        height: WALL_HEIGHT,
+        depth: WALL_THICK
+      }, scene);
+
+      wall.position = new BABYLON.Vector3(midX, floorY + WALL_HEIGHT/2, midZ);
+      const angle = Math.atan2(b.z-a.z, b.x-a.x);
+      wall.rotation.y = -angle; // align width axis to edge direction
+
+      wall.material = wallMat;
+      wall.checkCollisions = true;
+      wall.isPickable = false;
+      wall.parent = levelRoot;
+
+      wallMeshes.push(wall);
+    }
+
+    // Optional: add a faint floor outline for feedback
+    const outlinePts = poly.map(p => new BABYLON.Vector3(p.x, floorY+0.01, p.z));
+    outlinePts.push(outlinePts[0].clone());
+    const outline = BABYLON.MeshBuilder.CreateLines("outline", { points: outlinePts }, scene);
+    outline.color = new BABYLON.Color3(0.9, 0.6, 1.0);
+    outline.alpha = 0.9;
+    outline.parent = levelRoot;
+
+    // Disable scan visuals
+    scanMarkers.forEach(m => m.isVisible = false);
+    if (scanLines) scanLines.isVisible = false;
+    reticle.isVisible = false;
+
+    // Spawn bots
+    spawnBots(poly, BOT_COUNT_DEFAULT);
+
+    setState(STATE.PLAY);
+    updateHUD();
+    updateButtons();
+    showToast("Level built. Walk IRL to move. Tap to shoot.");
+  }
+
+  function computeCoverPoints(poly) {
+    // Simple cover points near each corner, nudged inward using centroid direction
+    const cx = poly.reduce((s,p)=>s+p.x,0)/poly.length;
+    const cz = poly.reduce((s,p)=>s+p.z,0)/poly.length;
+
+    const covers = [];
+    for (const p of poly) {
+      const dx = cx - p.x;
+      const dz = cz - p.z;
+      const mag = Math.hypot(dx,dz) || 1;
+      const inset = 0.35; // meters inward
+      covers.push(v2(p.x + (dx/mag)*inset, p.z + (dz/mag)*inset));
+    }
+    return covers;
+  }
+
+  function randomPointInside(poly) {
+    const b = polygonBounds(poly);
+    for (let k=0;k<500;k++) {
+      const x = b.minX + Math.random()*(b.maxX-b.minX);
+      const z = b.minZ + Math.random()*(b.maxZ-b.minZ);
+      const p = v2(x,z);
+      if (pointInPoly(p, poly)) return p;
+    }
+    return v2((b.minX+b.maxX)/2, (b.minZ+b.maxZ)/2);
+  }
+
+  function spawnBots(poly, count) {
+    const covers = computeCoverPoints(poly);
+
+    const botMat = new BABYLON.StandardMaterial("botMat", scene);
+    botMat.emissiveColor = new BABYLON.Color3(1.0, 0.25, 0.25);
+    botMat.diffuseColor = new BABYLON.Color3(0.25,0.05,0.05);
+
+    for (let i=0;i<count;i++) {
+      const p = randomPointInside(poly);
+      const mesh = BABYLON.MeshBuilder.CreateCapsule(`bot_${i}`, { height: 0.9, radius: 0.18 }, scene);
+      mesh.position = new BABYLON.Vector3(p.x, floorY + 0.45, p.z);
+      mesh.material = botMat;
+      mesh.checkCollisions = false;
+      mesh.isPickable = true;
+      mesh.parent = botRoot;
+
+      bots.push({
+        mesh,
+        hp: 2,
+        speed: 0.35 + Math.random()*0.25,
+        target: covers[Math.floor(Math.random()*covers.length)],
+        nextThink: performance.now() + 400 + Math.random()*600,
+        coverPoints: covers,
+        poly
+      });
+    }
+    updateHUD();
+  }
+
+  function hasLineOfSight(from, to) {
+    const dir = to.subtract(from);
+    const ray = new BABYLON.Ray(from, dir.normalize(), dir.length());
+    const hit = scene.pickWithRay(ray, (m) => wallMeshes.includes(m), false);
+    return !hit?.hit;
+  }
+
+  function botThink(bot, now) {
+    if (now < bot.nextThink) return;
+    bot.nextThink = now + 350 + Math.random()*450;
+
+    const playerPos = xrCamera ? xrCamera.position.clone() : null;
+    if (!playerPos) return;
+
+    const botPos = bot.mesh.position.clone();
+
+    // Choose behavior: if bot can see player, pick a cover point that breaks LOS
+    const sees = hasLineOfSight(botPos.add(new BABYLON.Vector3(0,0.4,0)), playerPos.add(new BABYLON.Vector3(0,0.4,0)));
+
+    if (sees) {
+      // find cover point that blocks LOS (best effort)
+      let best = null;
+      for (const c of bot.coverPoints) {
+        const c3 = new BABYLON.Vector3(c.x, floorY + 0.45, c.z);
+        if (!hasLineOfSight(c3.add(new BABYLON.Vector3(0,0.4,0)), playerPos.add(new BABYLON.Vector3(0,0.4,0)))) {
+          best = c; break;
+        }
+      }
+      bot.target = best || bot.coverPoints[Math.floor(Math.random()*bot.coverPoints.length)];
+    } else {
+      // roam to another cover point
+      bot.target = bot.coverPoints[Math.floor(Math.random()*bot.coverPoints.length)];
+    }
+  }
+
+  function botMove(bot, dt) {
+    const t = bot.target;
+    if (!t) return;
+    const pos = bot.mesh.position;
+    const target3 = new BABYLON.Vector3(t.x, pos.y, t.z);
+
+    const delta = target3.subtract(pos);
+    const d = delta.length();
+    if (d < 0.08) return;
+    const step = Math.min(d, bot.speed * dt);
+
+    const dir = delta.scale(1/(d||1));
+    bot.mesh.position = pos.add(dir.scale(step));
+
+    // face movement
+    bot.mesh.rotation.y = Math.atan2(dir.x, dir.z);
+  }
+
+  function shoot() {
+    if (!xrCamera) return;
+
+    // Ray from camera forward
+    const origin = xrCamera.position.clone();
+    const forward = xrCamera.getForwardRay(10).direction; // normalized
+    const ray = new BABYLON.Ray(origin, forward, 20);
+
+    const hit = scene.pickWithRay(ray, (m) => m && m.name && m.name.startsWith("bot_"), false);
+    if (hit?.hit && hit.pickedMesh) {
+      const b = bots.find(x => x.mesh === hit.pickedMesh);
+      if (b) {
+        b.hp -= 1;
+        flashHit(b.mesh);
+        if (b.hp <= 0) {
+          b.mesh.dispose();
+          bots = bots.filter(x => x !== b);
+          updateHUD();
+          showToast("Bot down!");
+          if (bots.length === 0) showToast("All bots cleared! Reset to scan again.", 1800);
+        }
+      }
+    } else {
+      // small feedback
+      showToast("Miss", 300);
+    }
+  }
+
+  function flashHit(mesh) {
+    const mat = mesh.material;
+    if (!mat) return;
+    const old = mat.emissiveColor.clone();
+    mat.emissiveColor = new BABYLON.Color3(1,1,1);
+    setTimeout(() => { if (mesh.isDisposed()) return; mat.emissiveColor = old; }, 90);
+  }
+
+  async function startAR() {
+    if (!isWebXRSupported()) {
+      showToast("WebXR not supported in this browser/device");
+      return;
+    }
+
+    try {
+      const supported = await navigator.xr.isSessionSupported("immersive-ar");
+      if (!supported) {
+        showToast("immersive-ar not supported (need ARCore + Chrome)");
+        return;
+      }
+    } catch (e) {
+      showToast("WebXR check failed");
+      return;
+    }
+
+    // Create scene if not created
+    if (!scene) makeScene();
+
+    try {
+      xr = await scene.createDefaultXRExperienceAsync({
+        uiOptions: { sessionMode: "immersive-ar", referenceSpaceType: "local-floor" },
+        optionalFeatures: true
+      });
+
+      xrCamera = xr.baseExperience.camera;
+      xrCamera.checkCollisions = true;
+      xrCamera.applyGravity = false; // you are moving physically
+      xrCamera.ellipsoid = new BABYLON.Vector3(0.2, 0.35, 0.2);
+      xrCamera.ellipsoidOffset = new BABYLON.Vector3(0, 0.35, 0);
+
+      // Hit-test feature (for floor tapping)
+      const fm = xr.baseExperience.featuresManager;
+      hitTestFeature = fm.enableFeature(BABYLON.WebXRHitTest, "latest", {
+        offsetRay: new BABYLON.Ray(new BABYLON.Vector3(0, 0, 0), new BABYLON.Vector3(0, 0, 1)),
+        preferredHandedness: "none"
+      });
+
+      hitTestFeature.onHitTestResultObservable.add((results) => {
+        if (state !== STATE.SCAN) return;
+
+        if (results && results.length) {
+          const m = results[0].transformationMatrix;
+          const p = new BABYLON.Vector3();
+          BABYLON.Vector3.FromArray(m, 12, p.asArray()); // (not reliable)
+          // Better: decompose matrix
+          const mat = BABYLON.Matrix.FromArray(m);
+          const pos = new BABYLON.Vector3();
+          const rot = new BABYLON.Quaternion();
+          const scl = new BABYLON.Vector3();
+          mat.decompose(scl, rot, pos);
+
+          latestHitPose = { position: pos, rotation: rot };
+          reticle.position.copyFrom(pos);
+          reticle.rotationQuaternion = rot;
+          reticle.isVisible = true;
+
+          trackingEl.textContent = "Tracking: OK";
+        } else {
+          latestHitPose = null;
+          reticle.isVisible = false;
+          trackingEl.textContent = "Tracking: Searching…";
+        }
+      });
+
+      xr.baseExperience.sessionManager.onXRSessionInit.add(() => {
+        // Enter scan mode
+        clearScan();
+        clearLevel();
+        clearBots();
+        setState(STATE.SCAN);
+        btnReset.disabled = false;
+        btnRecenter.disabled = false;
+        showToast("AR started. Aim at floor, then tap corners.");
+      });
+
+      xr.baseExperience.sessionManager.onXRSessionEnded.add(() => {
+        trackingEl.textContent = "Tracking: —";
+        setState(STATE.IDLE);
+        updateButtons();
+        showToast("AR session ended");
+      });
+
+      updateButtons();
+    } catch (err) {
+      console.error(err);
+      showToast("Failed to start AR (needs HTTPS + ARCore + Chrome)");
+    }
+  }
+
+  function recenter() {
+    if (!xr || !xr.baseExperience) return;
+    try {
+      xr.baseExperience.sessionManager.resetReferenceSpace();
+      showToast("Recentered");
+    } catch (e) {
+      showToast("Recenter not available");
+    }
+  }
+
+  function resetAll() {
+    clearBots();
+    clearLevel();
+    clearScan();
+    if (scanMarkers.length) scanMarkers.forEach(m=>m.isVisible=true);
+    setState(STATE.SCAN);
+    showToast("Reset. Scan again.");
+  }
+
+  // Buttons
+  btnStartAR.addEventListener("click", startAR);
+  btnUndo.addEventListener("click", () => { if (state===STATE.SCAN) undoScanPoint(); });
+  btnFinish.addEventListener("click", () => { if (state===STATE.SCAN) buildLevelFromScan(); });
+  btnRecenter.addEventListener("click", recenter);
+  btnReset.addEventListener("click", resetAll);
+
+  // Main loop
+  scene = makeScene();
+
+  scene.onBeforeRenderObservable.add(() => {
+    if (state === STATE.PLAY && xrCamera) {
+      // update bots
+      const dt = scene.getEngine().getDeltaTime() / 1000;
+      const now = performance.now();
+      for (const b of bots) {
+        botThink(b, now);
+        botMove(b, dt);
+      }
+    }
+  });
+
+  engine.runRenderLoop(() => {
+    if (scene) scene.render();
+  });
+
+  window.addEventListener("resize", () => engine.resize());
+
+  // Initial hints
+  if (!isWebXRSupported()) {
+    hint.innerHTML = `This device/browser doesn’t expose WebXR. Use <b>Android Chrome</b> with ARCore, served over <b>HTTPS</b>.`;
+  } else {
+    hint.innerHTML = `Tap <b>Start AR</b>. If it fails: ensure <b>HTTPS</b>, Android Chrome, and ARCore-supported device.`;
+  }
+})();
+</script>
+</body>
+</html>
