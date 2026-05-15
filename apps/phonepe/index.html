@@ -1,0 +1,3243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+
+<title>PhonePe</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#6d1bd1">
+
+<script src="https://unpkg.com/html5-qrcode"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+
+<style>
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:Arial, Helvetica, sans-serif;
+}
+
+body{
+    background:#f3f3f3;
+    overflow:hidden;
+}
+
+.screen{
+    width:100%;
+    height:100vh;
+    overflow:auto;
+    display:none;
+}
+
+.active{
+    display:block;
+}
+/* ================= FULL SCREEN SCANNER ================= */
+
+.scanScreenUI{
+    position:relative;
+    overflow:hidden;
+    background:black;
+}
+
+/* CAMERA */
+
+#reader{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    z-index:1;
+}
+
+#reader video{
+    width:100% !important;
+    height:100% !important;
+    object-fit:cover !important;
+}
+
+#reader__dashboard{
+    display:none !important;
+}
+
+#reader section{
+    border:none !important;
+}
+
+/* DARK OVERLAY */
+
+.cameraOverlay{
+    position:absolute;
+    inset:0;
+    background:rgba(0,0,0,0.35);
+    z-index:2;
+}
+
+/* HEADER */
+
+.scanHeader{
+    position:absolute;
+    top:25px;
+    left:0;
+    width:100%;
+    padding:0 20px;
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    z-index:5;
+    color:white;
+}
+
+.scanHeaderText{
+    flex:1;
+    margin-left:15px;
+}
+
+.scanHeaderText h2{
+    font-size:20px;
+    font-weight:bold;
+}
+
+.scanHeaderText p{
+    margin-top:6px;
+    opacity:0.9;
+    font-size:14px;
+}
+
+.scanBackBtn,
+.helpBtn{
+    width:46px;
+    height:46px;
+    border-radius:50%;
+    border:none;
+    background:rgba(255,255,255,0%);
+    color:white;
+    font-size:24px;
+    backdrop-filter:blur(5px);
+}
+
+/* SCAN FRAME */
+
+.scanFrameContainer{
+    position:absolute;
+    top:50%;
+    left:50%;
+    transform:translate(-50%,-50%);
+    z-index:5;
+}
+
+.scanFrame{
+    width:290px;
+    height:290px;
+    background:rgba(255,255,255,0.15);
+    border-radius:30px;
+    position:relative;
+    backdrop-filter:blur(2px);
+}
+
+/* CORNERS */
+
+.corner{
+    position:absolute;
+    width:52px;
+    height:52px;
+    border-color:#8d3cff;
+    border-style:solid;
+}
+
+.tl{
+    top: 20px;
+    left: 20px;
+    border-width: 4px 0 0 4px;
+    border-top-left-radius: 24px;
+}
+
+.tr{
+    top:20px;
+    right:20px;
+    border-width:4px 4px 0 0;
+    border-top-right-radius:24px;
+}
+
+.bl{
+    bottom:20px;
+    left:20px;
+    border-width:0 0 4px 4px;
+    border-bottom-left-radius:24px;
+}
+
+.br{
+    bottom:20px;
+    right:20px;
+    border-width:0 4px 4px 0;
+    border-bottom-right-radius:24px;
+}
+
+/* BOTTOM ACTIONS */
+
+.scanBottomActions{
+    position:absolute;
+    bottom:180px;
+    width:100%;
+    display:flex;
+    justify-content:center;
+    gap:40px;
+    z-index:5;
+}
+
+.circleAction{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    color:white;
+    font-size:14px;
+    cursor:pointer;
+    text-decoration:none;
+}
+
+.circleIcon{
+    width:72px;
+    height:72px;
+    border-radius:50%;
+    background:rgba(255,255,255,0.2);
+    backdrop-filter:blur(5px);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:32px;
+    margin-bottom:10px;
+}
+
+/* OCR STATUS */
+
+.ocrStatus{
+    position:absolute;
+    bottom:40px;
+    width:100%;
+    text-align:center;
+    color:white;
+    z-index:5;
+    font-size:18px;
+    font-weight:bold;
+}
+
+/* LOADER */
+
+.loader{
+    position:absolute;
+    bottom:70px;
+    left:50%;
+    transform:translateX(-50%);
+    width:44px;
+    height:44px;
+    border:5px solid rgba(255,255,255,0.3);
+    border-top:5px solid white;
+    border-radius:50%;
+    animation:spin 1s linear infinite;
+    z-index:5;
+    display:none;
+}
+/* ================= HOME ================= */
+
+.topHeader{
+    background:#6c2cff;
+    color:white;
+    padding:30px 20px;
+}
+
+.topHeader h1{
+    font-size:34px;
+}
+
+.topHeader p{
+    opacity:0.8;
+    margin-top:6px;
+}
+
+.heroCard{
+    margin:20px;
+    background:linear-gradient(135deg,#7a38ff,#aa7aff);
+    color:white;
+    padding:30px;
+    border-radius:28px;
+}
+
+.heroCard h2{
+    font-size:30px;
+}
+
+.heroCard p{
+    margin-top:10px;
+}
+
+/* ================= HOME ACTIONS ================= */
+
+.homeActions{
+    padding:20px;
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:18px;
+    padding-bottom:130px;
+}
+
+.miniCard{
+    background:white;
+    border-radius:24px;
+    padding:26px 20px;
+    text-align:center;
+    box-shadow:0 4px 12px rgba(0,0,0,0.08);
+}
+
+.miniIcon{
+    font-size:38px;
+    margin-bottom:12px;
+}
+
+/* ================= BOTTOM BAR ================= */
+.bottombar-icons{
+	width:25px;
+}
+
+.bottomBar{
+    position:fixed;
+    bottom:0;
+    left:0;
+    width:100%;
+    height:92px;
+    background:white;
+    display:flex;
+    justify-content:space-around;
+    align-items:center;
+    box-shadow:0 -2px 15px rgba(0,0,0,0.08);
+    z-index:9999;
+}
+
+.navItem{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    font-size:14px;
+    color:#666;
+    width:70px;
+}
+
+.navIcon{
+    font-size:28px;
+    margin-bottom:4px;
+}
+
+.activeNav{
+    color:black;
+    font-weight:bold;
+}
+
+/* ================= CENTER SCAN BUTTON ================= */
+
+.scanFloatingBtn{
+    position:relative;
+    top:-28px;
+    cursor:pointer;
+}
+
+.scanCircle{
+    width:82px;
+    height:82px;
+    border-radius:50%;
+    background:#6c2cff;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    color:white;
+    font-size:38px;
+    box-shadow:0 10px 20px rgba(108,44,255,0.4);
+    border:6px solid white;
+}
+/*
+.grid{
+    padding:20px;
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:18px;
+}
+
+.actionCard{
+    background:white;
+    border-radius:24px;
+    padding:30px 20px;
+    text-align:center;
+    cursor:pointer;
+    box-shadow:0 4px 12px rgba(0,0,0,0.08);
+}
+
+.icon{
+    font-size:42px;
+    margin-bottom:10px;
+}
+*/
+
+/* ================= SCAN ================= */
+
+.scanscreen-icons {
+width: 35px;
+} 
+
+.backBtn{
+    width:42px;
+    height:42px;
+    border:none;
+    border-radius:50%;
+    background:white;
+    font-size:22px;
+    cursor:pointer;
+}
+
+ 
+
+#reader{
+    border:none !important;
+}
+
+ 
+ 
+ 
+
+.ocrStatus{
+    margin-top:20px;
+    text-align:center;
+    color:#6c2cff;
+    font-weight:bold;
+}
+
+/* ================= PAYMENT ================= */
+
+.payTop{
+    padding:20px;
+    display:flex;
+    align-items:center;
+    gap:15px;
+}
+
+.payCard{
+    width:92%;
+    margin:auto;
+    background:white;
+    border-radius:24px;
+    padding:20px;
+}
+
+.profileRow{
+    display:flex;
+    align-items:center;
+    gap:16px;
+    margin-bottom:20px;
+}
+
+.avatar{
+    width:65px;
+    height:65px;
+    border-radius:50%;
+    background:#8d4cff;
+    color:white;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    font-size:28px;
+}
+
+.bigAvatar{
+    width:80px;
+    height:80px;
+    font-size:34px;
+}
+
+#profileName{
+    font-size:26px;
+}
+
+#profileUpi{
+    color:#666;
+    margin-top:5px;
+}
+
+#amountInput
+{
+    width:100%;
+    border:2px solid #ddd;
+    border-radius:18px;
+    padding:0 12px;
+    margin-top:0px;
+    font-size:24px;
+}
+
+#messageInput,
+#pinInput{
+    width:100%;
+    border:2px solid #ddd;
+    border-radius:18px;
+    padding:18px;
+    margin-top:0px;
+    font-size:24px;
+}
+
+#messageInput{
+    resize:none;
+    height:120px;
+}
+
+#proceedBtn{
+    width: 100%;
+    margin: 0;
+    display: block;
+    background: #5f259f;
+    color: white;
+    border: none;
+    padding: 18px;
+    border-radius: 0px;
+    font-size: 15px;
+    cursor: pointer;
+}
+
+#payBtn{
+	height: 74px;
+    border: none;
+    border-radius: 999px;
+    font-size: 23px;
+    color: #ffffff;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    cursor: pointer;
+    background: #2b387a;
+    font-weight: 500;
+}
+
+.doneBtn{
+    width:92%;
+    margin:25px auto;
+    display:block;
+    background:#6c2cff;
+    color:white;
+    border:none;
+    padding:18px;
+    border-radius:20px;
+    font-size:20px;
+    cursor:pointer;
+}
+
+/* ================= PIN ================= */
+
+.pinContainer{
+    padding:40px 20px;
+    text-align:center;
+}
+
+.pinContainer h2{
+    font-size:36px;
+}
+
+.pinContainer p{
+    margin-top:10px;
+    color:#666;
+}
+
+/* ================= SUCCESS ================= */
+
+.successScreen{
+    background:#1c9b44;
+    color:white;
+    text-align:center;
+    padding-top:60px;
+}
+
+.successCircle{
+    width:130px;
+    height:130px;
+    border-radius:50%;
+    background:white;
+    color:#1c9b44;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:70px;
+    margin:auto;
+    font-weight:bold;
+}
+
+.successScreen h1{
+    margin-top:25px;
+    font-size:42px;
+}
+
+#successTime{
+    margin-top:15px;
+    opacity:0.9;
+}
+
+.receiptCard{
+    width:92%;
+    background:white;
+    color:black;
+    margin:40px auto;
+    border-radius:28px;
+    padding:28px;
+    text-align:left;
+}
+
+.receiptRow{
+    display:flex;
+    align-items:center;
+    gap:20px;
+}
+
+.amountText{
+    margin-top:25px;
+    font-size:52px;
+    font-weight:bold;
+}
+
+.doneBtn{
+    background:white;
+    color:#6c2cff;
+}
+
+/* ================= LOADER ================= */
+
+.loader{
+    width:40px;
+    height:40px;
+    border:4px solid #ddd;
+    border-top:4px solid #6c2cff;
+    border-radius:50%;
+    animation:spin 1s linear infinite;
+    margin:20px auto;
+    display:none;
+}
+
+@keyframes spin{
+    from{
+        transform:rotate(0deg);
+    }
+    to{
+        transform:rotate(360deg);
+    }
+}
+/* =======================================================
+   NEW PAYMENT SCREEN
+======================================================= */
+
+.paymentScreenNew{
+    background:#f5f5f5;
+    position:relative;
+}
+
+.payHeaderNew{
+    height:70px;
+    background:white;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:0 16px;
+    border-bottom:1px solid #ececec;
+}
+
+.payHeaderNew h2{
+    font-size: 20px;
+    font-weight: 700;
+    flex: 1;
+    margin-left: 30px;
+    margin-top: 5px;
+}
+
+.payBackBtn,
+.helpCircle{
+    width:25px;
+    height:25px;
+    border:none;
+    background:none;
+    font-size:24px;
+    color:#222;
+}
+
+.helpCircle{
+    border:2px solid #444;
+    border-radius:50%;
+    font-size:20px;
+    font-weight:bold;
+}
+
+.payUserCard{
+    background:white;
+    margin-top:12px;
+    padding:18px;
+}
+
+.payUserLeft{
+    display:flex;
+    align-items:center;
+    gap:14px;
+}
+
+.payAvatar{
+    width:52px;
+    height:52px;
+    border-radius:50%;
+    background:#7a5a4b;
+    color:white;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    /*font-weight:bold;*/
+    font-size:18px;
+}
+
+#profileName{
+    font-size:16px;
+    font-weight:700;
+    color:#222;
+}
+
+#profileUpi{
+    margin-top:5px;
+    color:#777;
+    font-size:18px;
+}
+
+.payInputCard{
+    background:white;
+    padding:18px;
+}
+
+.amountWrapper{
+    border:3px solid #5f259f;
+    border-radius:6px;
+    display:flex;
+    align-items:center;
+    padding:0 16px;
+    height:58px;
+}
+
+.rupee{
+    font-size:29px;
+    font-weight:700;
+    color:#222;
+    margin-right:10px;
+}
+
+#amountInput{
+    border:none;
+    outline:none;
+    font-size:25px;
+    width:100%;
+    font-weight:700;
+    background:transparent;
+	margin-left: -15px;
+}
+
+#amountInput::placeholder{
+    color:#9b9b9b;
+}
+
+#messageInput{
+	width: 100%;
+    margin-top: 18px;
+    border: 1px solid #d8d8d8;
+    border-radius: 6px;
+    padding: 18px 14px;
+    font-size: 17px;
+    height: 58px;
+    resize: none;
+    outline: none;
+    background: white;
+}
+
+.bottomPayBtn{
+    position:fixed;
+    bottom:0;
+    left:0;
+    width:100%;
+    height:68px;
+    background:#e7e7e7;
+    border:none;
+    font-size:24px;
+    font-weight:700;
+    color:#555;
+}
+
+/* =======================================================
+   SUCCESS SCREEN
+======================================================= */
+
+.successScreenNew{
+    background:#f3f3f3;
+    min-height:100vh;
+    position:relative;
+}
+
+.successTopArea{
+    background:#23863d;
+    height:275px;
+    text-align:center;
+    color:white;
+    padding-top:28px;
+}
+
+.successOuterCircle{
+    width:92px;
+    height:92px;
+    border-radius:50%;
+    background:rgba(255,255,255,0.18);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    margin:auto;
+}
+
+.successInnerCircle{
+    width:64px;
+    height:64px;
+    border-radius:50%;
+    background:white;
+    color:#2d8b3e;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:46px;
+    font-weight:700;
+}
+
+.successTopArea h1{
+    margin-top:22px;
+    font-size:16.5px;
+    font-weight:700;
+    letter-spacing:0.2px;
+}
+
+#successTime{
+    margin-top:6px;
+    font-size:16.5px;
+    color:#ffec8c;
+    font-weight:500;
+}
+
+.successReceiptCard{
+    width:95%;
+    background:white;
+    border-radius:22px;
+    margin:-55px auto 0 auto;
+    overflow:hidden;
+    box-shadow:0 4px 12px rgba(0,0,0,0.08);
+}
+
+.receiptTopRow{
+    display:flex;
+    align-items:flex-start;
+    padding:28px 22px;
+    position:relative;
+}
+
+.receiptAvatar{
+    width:72px;
+    height:72px;
+    border-radius:22px;
+    background:#34a6e8;
+    color:white;
+    font-size:34px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    margin-right:18px;
+}
+
+.receiptUserInfo h2{
+    font-size:20px;
+    color:#222;
+    font-weight:700;
+    line-height:1.2;
+}
+
+.receiptUserInfo p{
+    margin-top:4px;
+    color:#666;
+    font-size:16px;
+}
+
+.receiptAmount{
+    margin-top:10px;
+    font-size:26px;
+    font-weight:700;
+    color:#111;
+}
+
+.splitText{
+    position:absolute;
+    right:20px;
+    bottom:32px;
+    color:#6b32d0;
+    font-weight:700;
+    font-size:13px;
+}
+
+.receiptActions{
+    display:flex;
+    border-top:1px solid #ececec;
+    height:92px;
+}
+
+.receiptAction{
+    flex:1;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+}
+
+.receiptAction:first-child{
+    border-right:1px solid #ececec;
+}
+
+.receiptActionInline{
+    display:flex;
+    align-items:center;
+    gap:12px;
+}
+
+.receiptActionIcon{
+    width:42px;
+    height:42px;
+    border-radius:50%;
+    background:#f2e9ff;
+    color:#8d3cff;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:18px;
+}
+
+.receiptAction span{
+    color:#4f4f4f;
+    font-size:14px;
+    font-weight:500;
+}
+
+.doneBtnNew{
+    width:100%;
+    position:fixed;
+    bottom:0;
+    left:0;
+    height:72px;
+    border:none;
+    background:#f3f3f3;
+    color:#6b32d0;
+    font-size:14px;
+    font-weight:700;
+}
+
+/* ======================================================
+   NEW PIN SCREEN
+====================================================== */
+
+.pinScreenNew{
+    background:#f7f7f7;
+    min-height:100vh;
+    padding:18px 16px;
+}
+
+.pinTopBar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+}
+
+.upiLogo{
+    font-size:42px;
+    font-style:italic;
+    font-weight:700;
+    color:#666;
+}
+
+.pinCloseBtn{
+    border:none;
+    background:none;
+    font-size:30px;
+    color:#444;
+}
+
+.bankText{
+    margin-top:12px;
+    font-size:16px;
+    font-weight:600;
+    color:#444;
+}
+
+.pinPayCard{
+    margin-top:18px;
+    background:#f4eace;
+    border-radius:18px;
+    padding:18px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+}
+
+.payAmountLine{
+    font-size:22px;
+    font-weight:700;
+    color:#222;
+}
+
+.payToLine{
+    margin-top:10px;
+    font-size:18px;
+    color:#777;
+}
+
+.pinPayRight{
+    font-size:34px;
+    color:#244dcf;
+}
+
+.pinTitle{
+    text-align:center;
+    margin-top:40px;
+    font-size:17px;
+    font-weight:700;
+    color:#222;
+}
+
+.pinDots{
+    margin-top:30px;
+    display:flex;
+    justify-content:center;
+    gap:18px;
+}
+
+.pinDot {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 1px solid #414141;
+    background: white;
+}
+
+.pinDot.filled{
+    background:#2b387a;
+    border-color:#222;
+}
+
+.pinWarning{
+    margin-top:120px;
+    text-align:center;
+    color:#777;
+    font-size:16px;
+}
+
+.pinKeypad{
+background: #eaeaf2;
+    padding: 12px 7px;
+    margin-top:12px;
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:14px;
+}
+
+.pinKey,
+.payKeyBtn{
+    height:74px;
+    border:none;
+    border-radius:999px;
+    background:white;
+    font-size:42px;
+    color:#222;
+    box-shadow:0 1px 2px rgba(0,0,0,0.05);
+}
+.pinsectionfixed{
+	position: fixed;
+    text-align: center;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    padding: 15px;
+}
+
+.backspaceKey{
+    font-size:30px;
+}
+
+.payKeyBtn{
+    background:#2450d7;
+    color:white;
+    font-size:32px;
+    font-weight:600;
+}
+
+/* ======================================================
+   DETAILS SCREEN
+====================================================== */
+
+.detailsScreen{
+    background:#f3f3f3;
+    overflow:auto;
+    padding-bottom:40px;
+}
+
+.detailsTopBar{
+    background:#1f7d2d;
+    color:white;
+    padding:14px 16px;
+    display:flex;
+    align-items:center;
+    gap:12px;
+}
+
+.detailsBackBtn{
+    border:none;
+    background:none;
+    color:white;
+    font-size:24px;
+}
+
+.detailsSuccessTitle{
+    font-size:18px;
+    font-weight:700;
+}
+
+.detailsSuccessTime{
+    margin-top:2px;
+    font-size:13px;
+    color:#d4f0a8;
+}
+
+.detailsCard{
+    background:white;
+    margin:14px 8px;
+    border-radius:18px;
+    padding:18px;
+}
+
+.detailsPaidRow{
+    display:flex;
+    justify-content:space-between;
+    align-items: flex-start;
+}
+
+.detailsUserLeft{
+    display:flex;
+    /*align-items:center;*/
+    gap:14px;
+}
+
+.detailsAvatar{
+	width: 45px;
+    height: 45px;
+    border-radius: 16px;
+    background: #6e18c9;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+}
+
+.paidToLabel{
+    color: #232323;
+    font-size: 16px;
+    font-weight: 900;
+    margin-bottom: 14px;
+}
+
+.detailsName{
+    margin-top:3px;
+    font-size:18px;
+    font-weight:500;
+}
+
+.detailsUpi{
+    margin-top:4px;
+    color:#888;
+    font-size:16px;
+}
+
+.detailsAmount{
+    font-size:18px;
+    font-weight:700;
+}
+
+.paymentDetailsHeaderRow{
+    margin-top:18px;
+    border-top:1px solid #ececec;
+    padding-top:18px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+
+.paymentDetailsLeft{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    font-size:16px;
+    color:#444;
+}
+
+.circleMiniIcon{
+    width:32px;
+    height:32px;
+    border-radius:50%;
+    border:1px solid #444;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:15px;
+}
+
+.detailsArrow{
+    font-size: 26px;
+    color: #444;
+    transform: rotate(270deg);
+}
+
+.detailItem{
+    margin-top:18px;
+}
+
+.detailItem span{
+    color:#777;
+    font-size:14px;
+}
+
+.detailValueRow{
+    margin-top:6px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+
+.detailValueRow strong{
+    font-size:15px;
+    font-weight:500;
+}
+
+.miniCopyIcon{
+    color:#7c35e8;
+    font-size:16px;
+}
+
+.debitSection{
+    margin-top:16px;
+}
+
+.debitTopRow{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+
+.debitLeft{
+    display:flex;
+    align-items:center;
+    gap:12px;
+}
+
+.bankCircle{
+    width:34px;
+    height:34px;
+    border-radius:32%;
+    background:#f4e7d7;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+}
+
+.debitLabel{
+    color:#777;
+    font-size:14px;
+	margin-bottom: 4px;
+}
+
+.debitAccount{
+    margin-top:3px;
+    font-size:15px;
+}
+
+.debitAmountArea{
+    display:flex;
+    align-items:center;
+    gap:10px;
+}
+
+.debitAmount{
+    font-size:18px;
+    /*font-weight:700;*/
+}
+
+.utrLine{
+    margin-top:6px;
+    margin-left:46px;
+    color:#777;
+    font-size:14px;
+}
+
+.detailActions{
+    margin-top:22px;
+    border-top:1px solid #ececec;
+    padding-top:18px;
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+}
+
+.detailAction{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:8px;
+}
+
+.detailActionCircle{
+    width:48px;
+    height:48px;
+    border-radius:50%;
+    background:#f1e7ff;
+    color:#7c35e8;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:20px;
+}
+
+.detailAction span{
+    color:#444;
+    font-size:12px;
+    text-align:center;
+}
+
+/* CONTACT */
+
+.contactCard{
+    background:white;
+    margin:0 8px;
+    border-radius:18px;
+    padding:20px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+}
+
+.contactLeft{
+    display:flex;
+    align-items:center;
+    gap:14px;
+}
+
+.contactIcon{
+    width:24px;
+    height:24px;
+    border-radius:50%;
+    border:1px solid #444;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:14px;
+}
+
+.contactLeft span{
+    font-size:16px;
+    color:#333;
+}
+
+.contactArrow{
+    font-size:26px;
+    color:#444;
+}
+
+/* ======================================================
+   HISTORY SCREEN
+====================================================== */
+
+.historyScreen{
+    background:#fafafa;
+    overflow:auto;
+}
+
+.historyHeader{
+    background:white;
+    padding:24px;
+}
+
+.historyTitleRow{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+}
+
+.historyTitleRow h1{
+    font-size:24px;
+}
+
+.statementBtn{
+    border:2px solid #e2e2e2;
+    background:white;
+    border-radius:999px;
+    padding:14px 22px;
+    font-size:14px;
+    font-weight:600;
+}
+
+.historySearch{
+    margin-top:24px;
+    background:#f4effd;
+    border-radius:45px;
+    height:62px;
+    display:flex;
+    align-items:center;
+    padding:0 22px;
+    gap:18px;
+}
+
+.historySearch span{
+    font-size:32px;
+}
+
+.historySearch input{
+    border:none;
+    background:none;
+    width:100%;
+    font-size:18px;
+    outline:none;
+}
+
+.historyMonth{
+    padding:24px;
+    font-size:14px;
+    letter-spacing:5px;
+    color:#777;
+    font-weight:700;
+}
+
+.historyItem{
+    background:white;
+    padding:24px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    border-bottom:1px solid #eee;
+	cursor:pointer;
+	transition:0.2s;
+}
+
+.historyItem:active{
+    transform:scale(0.99);
+    background:#f8f8f8;
+}
+
+.historyLeft{
+    display:flex;
+    align-items:center;
+    gap:18px;
+}
+
+.historyArrow{
+	width: 52px;
+    height: 52px;
+    border-radius: 18px;
+    background: #f6f6f6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 34px;
+    margin-top: -20px;
+}
+
+.historyTextTop{
+    color:#777;
+    font-size:14px;
+}
+
+.historyName{
+    margin-top:4px;
+    font-size:18px;
+}
+
+.historyTime{
+    margin-top:10px;
+    color:#999;
+	font-size: 14px;
+}
+
+.historyRight{
+    text-align:right;
+}
+
+.historyAmount{
+    font-size:20px;
+    font-weight:700;
+	margin-top: 5px;
+    margin-bottom: 7px;
+}
+
+.historyBank{
+    /*margin-top:16px;*/
+    color:#999;
+	font-size: 14px;
+	display: flex;
+    gap: 4px;
+    align-items: center;
+}
+
+.historyBank img{
+	width: 19px;
+}
+/* ======================================================
+   NEW HOME SCREEN
+====================================================== */
+
+.homeScreenNew{
+    background:#f5f5f5;
+    overflow:auto;
+    padding-bottom:110px;
+}
+
+/* TOP BANNER */
+
+.homeBanner{
+    height:300px;
+    background:#d9d9d9;
+    position:relative;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+}
+.homeBannerImage{
+    width:100%;
+    height:100%;
+    /*object-fit:cover;*/
+}
+
+.profileMini{
+    position:absolute;
+    top:12px;
+    left:12px;
+    width:32px;
+    height:32px;
+    border-radius:10px;
+    background:#d5aa00;
+    color:white;
+    font-weight:700;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+}
+
+.bannerPlaceholder{
+    text-align:center;
+    color:#a0a0a0;
+    font-size:26px;
+    font-weight:700;
+    letter-spacing:4px;
+}
+
+.bannerPlaceholder span{
+    display:block;
+    margin-top:6px;
+    font-size:18px;
+    letter-spacing:2px;
+}
+
+/* COMMON CARD */
+
+.homeCard{
+    background:white;
+    /*margin-top:10px;*/
+    padding:18px 14px;
+}
+
+/* SECTION ROW */
+
+.sectionTopRow{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+
+.sectionTopRow h2{
+    font-size:16px;
+    font-weight:700;
+    color:#222;
+}
+
+.referBadge{
+    background:#f8ece5;
+    padding:8px 14px;
+    border-radius:999px;
+    font-size:14px;
+    color:#9b6a56;
+    font-weight:600;
+}
+
+/* TRANSFER GRID */
+
+.transferGrid{
+    margin-top:18px;
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:14px;
+}
+
+.transferItem{
+    text-align:center;
+}
+
+.transferCircle{
+    width:64px;
+    height:64px;
+    border-radius:50%;
+    background:#6e18c9;
+    margin:auto;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:white;
+    font-size:28px;
+}
+
+.transferCircle img {
+	width: 100%;
+	height: 100%;
+}
+
+.walletCircle{
+    position:relative;
+}
+
+.transferItem span{
+    display:block;
+    margin-top:10px;
+    font-size:14px;
+    line-height:1.3;
+    color:#333;
+}
+
+/* OFFER STRIP */
+
+.offerStrip{
+    display:flex;
+    gap:10px;
+    padding:10px;
+}
+
+.offerMiniCard{
+    display: flex;
+    background: white;
+    border-radius: 12px;
+    padding: 14px;
+    font-size: 14px;
+    color: #444;
+    border: 1px solid #eee;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    align-items: center;
+    gap: 6px;
+}
+
+/* RECHARGE */
+
+.rechargeTitle{
+    font-size:16px;
+    font-weight:700;
+    color:#222;
+}
+
+.rechargeGrid{
+    margin-top:18px;
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:16px;
+}
+
+.rechargeItem{
+    text-align:center;
+}
+
+.rechargeIcon{
+    width:68px;
+    height:58px;
+    background:#f5f5f5;
+    border:1px solid #e8e8e8;
+    border-radius:12px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    margin:auto;
+    font-size:26px;
+}
+
+.rechargeItem span{
+    display:block;
+    margin-top:10px;
+    font-size:13px;
+    line-height:1.3;
+    color:#333;
+}
+
+/* BILL PROMO */
+
+.billPromoRow{
+    margin-top:18px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    background:#f8f8f8;
+    border-radius:12px;
+    padding:14px;
+}
+
+.billPromoText{
+    font-size:14px;
+    color:#444;
+}
+
+.moreBtn{
+    color:#6e18c9;
+    font-weight:700;
+}
+
+/* LOANS */
+
+.loanHeader{
+    margin-top:12px;
+    background:white;
+    padding:20px 18px;
+    font-size:16px;
+    font-weight:700;
+}
+
+/* BOTTOM NAV */
+
+.bottomNav{
+    position:fixed;
+    left:0;
+    right:0;
+    bottom:0;
+    height:82px;
+    background:white;
+    border-top:1px solid #e8e8e8;
+    display:flex;
+    align-items:center;
+    justify-content:space-around;
+    z-index:100;
+}
+
+.navItem{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    font-size:13px;
+    color:#555;
+}
+
+.navIcon{
+    font-size:24px;
+    margin-bottom:4px;
+}
+
+.scanFab{
+    width:72px;
+    height:72px;
+    border:none;
+    border-radius:50%;
+    background:#6e18c9;
+    color:white;
+    font-size:30px;
+    /*margin-top:-24px;*/
+    box-shadow:0 6px 14px rgba(0,0,0,0.18);
+}
+</style>
+</head>
+
+<body>
+ 
+
+<!-- ================= HOME ================= -->
+
+<section id="homeScreen" class="screen active homeScreenNew">
+
+    <!-- TOP BANNER -->
+
+    <div class="homeBanner">
+
+        <div class="profileMini">
+            S
+        </div>
+
+        <img    src="cover.png"    class="homeBannerImage"    id="homeBannerImage">
+
+    </div>
+
+    <!-- MONEY TRANSFERS -->
+
+    <div class="homeCard">
+
+        <div class="sectionTopRow">
+
+            <h2>Money Transfers</h2>
+
+            <div class="referBadge">
+                🪙 Refer → ₹200
+            </div>
+
+        </div>
+
+        <div class="transferGrid">
+
+            <!-- MOBILE -->
+
+            <div class="transferItem scanBtn">
+
+                <div class="transferCircle">
+                    <img src="tonumber.png">
+                </div>
+
+                <span>
+                    To Mobile Number
+                </span>
+
+            </div>
+
+            <!-- BANK -->
+
+            <div class="transferItem">
+
+                <div class="transferCircle">
+                    <img src="bank.png">
+                </div>
+
+                <span>
+                    To Bank & Self A/c
+                </span>
+
+            </div>
+
+            <!-- WALLET -->
+
+            <div class="transferItem">
+
+                <div class="transferCircle walletCircle">
+                    <img src="wallet.png">
+                </div>
+
+                <span>
+                    PhonePe Wallet
+                </span>
+
+            </div>
+
+            <!-- BALANCE -->
+
+            <div class="transferItem">
+
+                <div class="transferCircle">
+                    <img src="balance.png">
+                </div>
+
+                <span>
+                    Check Balance
+                </span>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- OFFER STRIP -->
+
+    <div class="offerStrip">
+
+        <div class="offerMiniCard"> 
+            <img src="card-icon.png" class="bottombar-icons">
+			<span>Save VISA Card to pay faster</span> 
+        </div>
+
+        <div class="offerMiniCard"> 
+            <img src="share-market-icon.png" class="bottombar-icons"> Brokerage: ₹0 now 
+        </div>
+
+    </div>
+
+    <!-- RECHARGE SECTION -->
+
+    <div class="homeCard rechargeCard">
+
+        <h2 class="rechargeTitle">
+            Recharge & Bills
+        </h2>
+
+        <div class="rechargeGrid">
+
+            <div class="rechargeItem">
+
+                <div class="rechargeIcon">
+                    🔋
+                </div>
+
+                <span>
+                    Mobile Recharge
+                </span>
+
+            </div>
+
+            <div class="rechargeItem">
+
+                <div class="rechargeIcon">
+                    🚌
+                </div>
+
+                <span>
+                    Fastag Recharge
+                </span>
+
+            </div>
+
+            <div class="rechargeItem">
+
+                <div class="rechargeIcon">
+                    💡
+                </div>
+
+                <span>
+                    Electricity Bill
+                </span>
+
+            </div>
+
+            <div class="rechargeItem">
+
+                <div class="rechargeIcon">
+                    💰
+                </div>
+
+                <span>
+                    Loan Repayment
+                </span>
+
+            </div>
+
+        </div>
+
+        <!-- BOTTOM PROMO -->
+
+        <div class="billPromoRow">
+
+            <div class="billPromoText">
+                APEPDCL is live on BBPS
+            </div>
+
+            <div class="moreBtn">
+                More →
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- LOANS -->
+
+    <div class="loanHeader">
+        Loans
+    </div>
+
+    <!-- BOTTOM NAV -->
+
+    <div class="bottomNav">
+
+        <div class="navItem homeBtn">
+            <div class="navIcon"> <div class="navIcon"> <img src="home_icon.png" class="bottombar-icons"> </div></div>
+            <span>Home</span>
+        </div>
+
+        <div class="navItem">
+            <div class="navIcon"> <img src="search_icon.png" class="bottombar-icons"> </div>
+            <span>Search</span>
+        </div>
+
+        <button class="scanFab scanBtn">
+            <img src="scan_icon.png" class="bottombar-icons">
+        </button>
+
+        <div class="navItem">
+            <div class="navIcon"> <img src="alert_icon.png" class="bottombar-icons"> </div>
+            <span>Alerts</span>
+        </div>
+
+        <div class="navItem historyBtn">
+            <div class="navIcon"> <img src="history_icon.png" class="bottombar-icons"> </div>
+            <span>History</span>
+        </div>
+
+    </div>
+
+</section>
+
+<!-- ================= SCAN ================= -->
+
+<!-- ================= SCAN ================= -->
+
+<section id="scanScreen" class="screen scanScreenUI">
+
+    <!-- CAMERA BACKGROUND -->
+    <div id="reader"></div>
+
+    <!-- DARK OVERLAY -->
+    <div class="cameraOverlay"></div>
+
+    <!-- TOP BAR -->
+    <div class="scanHeader">
+
+        <button class="scanBackBtn" onclick="goHome()">
+            ←
+        </button>
+
+        <div class="scanHeaderText">
+            <h2>Scan any QR</h2>
+            <p>Demo Wallet • UPI • Payments</p>
+        </div>
+
+        <button class="helpBtn">
+            ?
+        </button>
+
+    </div>
+
+    <!-- SCAN FRAME -->
+    <div class="scanFrameContainer">
+
+        <div class="scanFrame">
+
+            <div class="corner tl"></div>
+            <div class="corner tr"></div>
+            <div class="corner bl"></div>
+            <div class="corner br"></div>
+
+        </div>
+
+    </div>
+
+    <!-- ACTION BUTTONS -->
+    <div class="scanBottomActions">
+
+        <label class="circleAction">
+            <div class="circleIcon"><img src="upload-qr.png" class="scanscreen-icons"></div>
+            <span>Upload QR</span>
+            <input type="file" id="qrInput" accept="image/*" hidden >
+        </label>
+		<label class="circleAction torchAction">
+            <div class="circleIcon"><img src="torch-icon.png" class="scanscreen-icons"></div>
+            <span>Torch</span>
+        </label>
+
+		<!--
+        <button class="circleAction torchAction"> 
+            <div class="circleIcon">🔦</div> 
+            <span>Torch</span> 
+        </button>
+		-->
+
+    </div>
+
+    <!-- OCR STATUS -->
+    <div class="ocrStatus" id="ocrStatus"></div>
+
+    <!-- LOADER -->
+    <div class="loader" id="loader"></div>
+
+</section>
+<!-- ================= PAYMENT ================= -->
+
+<!-- ================= PAYMENT ================= -->
+
+<section id="paymentScreen" class="screen paymentScreenNew">
+
+    <div class="payHeaderNew">
+
+        <button class="payBackBtn" onclick="goScan()">←</button>
+
+        <h2>Pay</h2>
+
+        <button class="helpCircle">?</button>
+
+    </div>
+
+    <div class="payUserCard">
+
+        <div class="payUserLeft">
+
+            <div class="payAvatar" id="avatarText">
+                DK
+            </div>
+
+            <div>
+
+                <h3 id="profileName">
+                    Unknown User
+                </h3>
+
+                <p id="profileUpi">
+                    unknown@upi
+                </p>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="payInputCard">
+
+        <div class="amountWrapper">
+
+            <span class="rupee">₹</span>
+
+            <input
+                type="number"
+                id="amountInput"
+                placeholder="Enter amount"
+            >
+
+        </div>
+
+        <textarea
+            id="messageInput"
+            placeholder="Add a message (optional)"
+        ></textarea>
+
+    </div>
+
+    <button id="proceedBtn" class="bottomPayBtn">
+        Proceed To Pay
+    </button>
+
+</section>
+<!-- ================= PIN ================= -->
+
+<!-- ================= PIN ================= -->
+
+<section id="pinScreen" class="screen pinScreenNew">
+
+    <!-- TOP BAR -->
+
+    <div class="pinTopBar">
+
+        <div class="upiLogo">
+            UPI
+        </div>
+
+        <button class="pinCloseBtn" onclick="goHome()">
+            ✕
+        </button>
+
+    </div>
+
+    <!-- BANK -->
+
+    <div class="bankText">
+        SAVINGS · State Bank Of India · • • • • 7532
+    </div>
+
+    <!-- PAYMENT CARD -->
+
+    <div class="pinPayCard">
+
+        <div class="pinPayLeft">
+
+            <div class="payAmountLine">
+                Pay ₹<span id="pinAmount">0</span>
+            </div>
+
+            <div class="payToLine">
+                To <span id="pinReceiverName">User</span>
+            </div>
+
+        </div>
+
+        <div class="pinPayRight">
+            ₹👤
+        </div>
+
+    </div>
+
+    <!-- TITLE -->
+
+    <div class="pinTitle">
+        Enter your PIN
+    </div>
+
+    <!-- PIN DOTS -->
+
+    <div class="pinDots">
+
+        <div class="pinDot"></div>
+        <div class="pinDot"></div>
+        <div class="pinDot"></div>
+        <div class="pinDot"></div>
+
+    </div>
+
+
+<div class="pinsectionfixed">
+    <!-- WARNING -->	
+
+    <div class="pinWarning">
+	<span style="color: #df901c;font-weight: 700;">ⓘ </span>
+        Never enter your UPI PIN to receive money
+    </div>
+
+    <!-- KEYPAD -->
+
+    <div class="pinKeypad">
+
+        <button class="pinKey">1</button>
+        <button class="pinKey">2</button>
+        <button class="pinKey">3</button>
+
+        <button class="pinKey">4</button>
+        <button class="pinKey">5</button>
+        <button class="pinKey">6</button>
+
+        <button class="pinKey">7</button>
+        <button class="pinKey">8</button>
+        <button class="pinKey">9</button>
+
+        <button class="pinKey backspaceKey">⌫</button>
+        <button class="pinKey">0</button>
+
+        <button class="payKeyBtn" id="payBtn">
+            Pay
+        </button>
+
+    </div>
+
+</div>
+</section>
+<!-- ================= SUCCESS ================= -->
+
+<!-- ================= SUCCESS ================= -->
+
+<section id="successScreen" class="screen successScreenNew">
+
+    <div class="successTopArea">
+
+        <div class="successOuterCircle">
+
+			<div class="successInnerCircle">
+				✓
+			</div>
+
+		</div>
+
+        <h1>Payment Successful</h1>
+
+        <p id="successTime"></p>
+
+    </div>
+
+    <div class="successReceiptCard">
+
+        <div class="receiptTopRow">
+
+            <div class="receiptAvatar" id="successAvatar">
+                BA
+            </div>
+
+            <div class="receiptUserInfo">
+
+                <h2 id="successName">
+                    User
+                </h2>
+
+                <p id="successUpi">
+                    user@upi
+                </p>
+
+                <div class="receiptAmount">
+                    ₹<span id="successAmount">0</span>
+                </div>
+
+            </div>
+
+            <div class="splitText">
+                Split Expense
+            </div>
+
+        </div>
+
+        <div class="receiptActions">
+
+			<div class="receiptAction" id="viewDetailsBtn">
+
+				<div class="receiptActionInline">
+
+					<div class="receiptActionIcon">
+						<img src="view-details-icon.png" class="bottombar-icons">
+					</div>
+
+					<span>View Details</span>
+
+				</div>
+
+			</div>
+
+			<div class="receiptAction">
+
+				<div class="receiptActionInline">
+
+					<div class="receiptActionIcon">
+						<img src="share-icon.png" class="bottombar-icons">
+					</div>
+
+					<span>Share Receipt</span>
+
+				</div>
+
+			</div>
+
+		</div>
+
+    </div>
+
+    <button class="doneBtnNew" onclick="goHome()">
+        Done
+    </button>
+
+</section>
+
+<!-- ================= DETAILS SCREEN ================= -->
+
+<section id="detailsScreen" class="screen detailsScreen">
+
+    <!-- TOP -->
+
+    <div class="detailsTopBar">
+
+        <button class="detailsBackBtn" onclick="goHome()">
+            ←
+        </button>
+
+        <div>
+
+            <div class="detailsSuccessTitle">
+                Transaction Successful
+            </div>
+
+            <div class="detailsSuccessTime" id="detailsDate">
+                09:47 pm on 14 May 2026
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- MAIN CARD -->
+
+    <div class="detailsCard">
+
+        <!-- PAID TO -->
+<div class="paidto-section">
+	<div class="paidToLabel"> Paid to </div>
+        <div class="detailsPaidRow">
+
+            <div class="detailsUserLeft">
+
+                <div class="detailsAvatar" id="detailsAvatar">
+                    DK
+                </div>
+
+                <div>
+
+                    <div class="detailsName" id="detailsName">
+                        User
+                    </div>
+
+                    <div class="detailsUpi" id="detailsUpi">
+                        user@upi
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="detailsAmount">
+                ₹<span id="detailsAmount">0</span>
+            </div>
+
+        </div>
+        </div>
+
+
+        <!-- PAYMENT DETAILS HEADER -->
+
+        <div class="paymentDetailsHeaderRow">
+
+            <div class="paymentDetailsLeft">
+
+                <div style="display: flex;align-items: center;">
+                    <img src="doc-white-icon.png" class="bottombar-icons">
+                </div>
+
+                <span>
+                    Payment Details
+                </span>
+
+            </div>
+
+            <div class="detailsArrow"> › </div>
+
+        </div>
+
+        <!-- TRANSACTION ID -->
+
+        <div class="detailItem">
+
+            <span>Transaction ID</span>
+
+            <div class="detailValueRow">
+
+                <strong id="detailsTxnId"></strong>
+
+                <div class="miniCopyIcon">
+                    <img src="doc-icon.png" class="bottombar-icons">
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- DEBITED FROM -->
+
+        <div class="debitSection">
+		
+			<div class="debitLabel">Debited from</div>
+
+            <div class="debitTopRow">
+
+                <div class="debitLeft">
+
+                    <div class="bankCircle"> <img src="icici.png" style="width: 35px;"> </div>
+
+                    <div> 
+                        <div class="debitAccount"> XXXXXXXXXX79 </div> 
+                    </div>
+
+                </div>
+
+                <div class="debitAmountArea"> 
+                    <div class="debitAmount">
+                        ₹<span id="detailsDebitAmount">
+                            20
+                        </span>
+                    </div>  
+                </div>
+
+            </div>
+
+            <div class="utrLine">
+                <div style="display: flex;justify-content: space-between;align-items: center;">
+					<div style="display: flex;align-items: center;">
+						 UTR:<span id="detailsUtr"></span>
+					</div>
+					<div style="display: flex;align-items: center;">
+						<div class="miniCopyIcon"> <img src="doc-icon.png" class="bottombar-icons"> </div>
+					</div>
+				</div>
+            </div>
+
+        </div>
+
+        <!-- ACTIONS -->
+
+        <div class="detailActions">
+
+            <div class="detailAction">
+
+                <div class="detailActionCircle">
+                    <img src="pay-again-icon.png" class="bottombar-icons">
+                </div>
+
+                <span>Pay Again</span>
+
+            </div>
+
+            <div class="detailAction" id="detailsHistoryBtn">
+
+                <div class="detailActionCircle">
+                    <img src="history_icon-blue.png" class="bottombar-icons">
+                </div>
+
+                <span>View History</span>
+
+            </div>
+
+            <div class="detailAction">
+
+                <div class="detailActionCircle">
+                    <img src="split-icon.png" class="bottombar-icons">
+                </div>
+
+                <span>Split Expense</span>
+
+            </div>
+
+            <div class="detailAction">
+
+                <div class="detailActionCircle">
+                    <img src="share-icon.png" class="bottombar-icons">
+                </div>
+
+                <span>Share Receipt</span>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- CONTACT CARD -->
+
+    <div class="contactCard">
+
+        <div class="contactLeft">
+
+            <div class="contactIcon">
+                ?
+            </div>
+
+            <span>
+                Contact
+            </span>
+
+        </div>
+
+        <div class="contactArrow">
+            ›
+        </div>
+
+    </div>
+
+</section>
+<!-- ================= HISTORY SCREEN ================= -->
+
+<section id="historyScreen" class="screen historyScreen">
+
+    <div class="historyHeader">
+
+        <div class="historyTitleRow">
+
+            <h1>History</h1>
+
+            <button class="statementBtn">
+                ⭳ My Statements
+            </button>
+
+        </div>
+
+        <div class="historySearch">
+
+            <span>⌕</span>
+
+            <input
+                type="text"
+                placeholder="Search"
+            >
+
+        </div>
+
+    </div>
+
+    <div class="historyMonth">
+        MAY
+    </div>
+
+    <div id="historyList">
+
+    </div>
+
+	 <!-- FLOATING BAR -->
+	 <div class="bottomNav">
+
+        <div class="navItem homeBtn">
+            <div class="navIcon"> <div class="navIcon"> <img src="home_icon.png" class="bottombar-icons"> </div></div>
+            <span>Home</span>
+        </div>
+
+        <div class="navItem">
+            <div class="navIcon"> <img src="search_icon.png" class="bottombar-icons"> </div>
+            <span>Search</span>
+        </div>
+
+        <button class="scanFab scanBtn">
+            <img src="scan_icon.png" class="bottombar-icons">
+        </button>
+
+        <div class="navItem">
+            <div class="navIcon"> <img src="alert_icon.png" class="bottombar-icons"> </div>
+            <span>Alerts</span>
+        </div>
+
+        <div class="navItem historyBtn">
+            <div class="navIcon"> <img src="history_icon.png" class="bottombar-icons"> </div>
+            <span>History</span>
+        </div>
+
+    </div>
+	
+</section>
+
+<!-- ================= AUDIO ================= -->
+
+<audio id="successAudio">
+    <!-- <source src="https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3"> -->
+	<source src="PhonePe-TingDing.mp3">
+	
+</audio>
+
+<script>
+
+// ================= SCREENS =================
+
+const screens = {
+    home: document.getElementById("homeScreen"),
+    scan: document.getElementById("scanScreen"),
+    payment: document.getElementById("paymentScreen"),
+    pin: document.getElementById("pinScreen"),
+    success: document.getElementById("successScreen"),
+    details: document.getElementById("detailsScreen"),
+    history: document.getElementById("historyScreen")
+};
+
+function showScreen(screen){
+
+    Object.values(screens).forEach(s=>{
+        s.classList.remove("active");
+    });
+
+    screen.classList.add("active");
+}
+
+function goHome(){
+    showScreen(screens.home);
+}
+
+function goScan(){
+    showScreen(screens.scan);
+}
+
+// ================= VARIABLES =================
+
+let detectedName = "Unknown User";
+let detectedUpi = "unknown@upi";
+let transactions = [];
+let currentTransaction = null;
+
+const scanBtns =    document.querySelectorAll(".scanBtn");
+const qrInput = document.getElementById("qrInput");
+
+const profileName = document.getElementById("profileName");
+const profileUpi = document.getElementById("profileUpi");
+const avatarText = document.getElementById("avatarText");
+
+const proceedBtn = document.getElementById("proceedBtn");
+const payBtn = document.getElementById("payBtn");
+
+const successName = document.getElementById("successName");
+const successUpi = document.getElementById("successUpi");
+const successAvatar = document.getElementById("successAvatar");
+const successAmount = document.getElementById("successAmount");
+
+const amountInput = document.getElementById("amountInput");
+
+const pinAmount = document.getElementById("pinAmount");
+
+const pinReceiverName = document.getElementById("pinReceiverName");
+
+const successAudio = document.getElementById("successAudio");
+
+const loader = document.getElementById("loader");
+const ocrStatus = document.getElementById("ocrStatus");
+
+const detailsName =    document.getElementById("detailsName");
+const detailsUpi =    document.getElementById("detailsUpi");
+const detailsAmountEl =    document.getElementById("detailsAmount");
+const detailsTxnId =    document.getElementById("detailsTxnId");
+const detailsUtr =    document.getElementById("detailsUtr");
+const detailsDate =    document.getElementById("detailsDate");
+const detailsAvatar =    document.getElementById("detailsAvatar");
+const detailsDebitAmount =    document.getElementById("detailsDebitAmount");
+const historyList =    document.getElementById("historyList");
+const historyBtns =    document.querySelectorAll(".historyBtn");
+const homeBtns =    document.querySelectorAll(".homeBtn");
+
+const viewDetailsBtn =    document.getElementById("viewDetailsBtn");
+const detailsHistoryBtn =    document.getElementById("detailsHistoryBtn");
+
+// ================= SCAN BUTTON =================
+
+scanBtns.forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+        showScreen(screens.scan);
+        startScanner();
+    });
+});
+
+// ================= CAMERA =================
+
+let html5QrCode;
+
+async function startScanner(){
+
+    if(html5QrCode) return;
+
+    html5QrCode = new Html5Qrcode("reader");
+
+    try{
+
+        await html5QrCode.start(
+			{
+				facingMode:"environment"
+			},
+			{
+				fps:10,
+				qrbox:{
+					width:250,
+					height:250
+				},
+				aspectRatio:1
+			},
+			(decodedText)=>{
+
+				console.log(decodedText);
+
+			}
+		);
+
+    }catch(err){
+
+        console.log(err);
+    }
+}
+
+// ================= OCR =================
+
+qrInput.addEventListener("change", async (e)=>{
+
+    const file = e.target.files[0];
+
+    if(!file) return;
+
+    loader.style.display = "block";
+
+    ocrStatus.innerText = "Scanning image...";
+
+    const result = await Tesseract.recognize(
+        file,
+        "eng"
+    );
+
+    loader.style.display = "none";
+
+    const text = result.data.text;
+
+    console.log(text);
+
+    extractData(text);
+});
+
+// ================= EXTRACT =================
+
+function extractData(text){
+
+    // UPI ID
+    const upiRegex = /[a-zA-Z0-9.\-_]+@[a-zA-Z]+/g;
+
+    const upiMatch = text.match(upiRegex);
+
+    if(upiMatch){
+        detectedUpi = upiMatch[0];
+    }
+
+    // NAME
+    const lines = text
+        .split("\n")
+        .map(l=>l.trim())
+        .filter(l=>l.length > 2);
+
+    let bestName = "Unknown User";
+
+    for(let line of lines){
+
+        if(
+            !line.includes("@") &&
+            /^[A-Z\s]+$/.test(line) &&
+            line.length > 5
+        ){
+            bestName = line;
+            break;
+        }
+    }
+
+    detectedName = bestName;
+
+    updatePaymentUI();
+
+    showScreen(screens.payment);
+}
+
+// ================= UPDATE PAYMENT =================
+
+function updatePaymentUI(){
+
+    profileName.innerText = detectedName;
+    profileUpi.innerText = detectedUpi;
+
+    //avatarText.innerText =
+    //    detectedName.charAt(0);
+	const initials = detectedName
+    .split(" ")
+    .map(n=>n[0])
+    .join("")
+    .substring(0,2);
+
+	avatarText.innerText = initials;	
+
+    successName.innerText = detectedName;
+    successUpi.innerText = detectedUpi;
+
+    successAvatar.innerText =
+        detectedName.charAt(0);
+}
+
+// ================= PROCEED =================
+
+proceedBtn.addEventListener("click", ()=>{
+
+    const amount = amountInput.value;
+
+    if(!amount){
+
+        alert("Enter amount");
+
+        return;
+    }
+
+    pinAmount.innerText = amount;
+
+    pinReceiverName.innerText = detectedName;
+
+    enteredPin = "";
+
+    updatePinDots();
+
+    showScreen(screens.pin);
+});
+
+// ================= PIN KEYPAD =================
+
+let enteredPin = "";
+
+const pinKeys =
+    document.querySelectorAll(".pinKey");
+
+const pinDots =
+    document.querySelectorAll(".pinDot");
+
+function updatePinDots(){
+
+    pinDots.forEach((dot,index)=>{
+
+        if(index < enteredPin.length){
+
+            dot.classList.add("filled");
+
+        }else{
+
+            dot.classList.remove("filled");
+        }
+    });
+}
+
+pinKeys.forEach(key=>{
+
+    key.addEventListener("click", ()=>{
+
+        const value = key.innerText;
+
+        // BACKSPACE
+
+        if(value === "⌫"){
+
+            enteredPin =
+                enteredPin.slice(0,-1);
+
+            updatePinDots();
+
+            return;
+        }
+
+        // LIMIT 4 DIGITS
+
+        if(enteredPin.length >= 4)
+            return;
+
+        enteredPin += value;
+
+        updatePinDots();
+    });
+});
+
+// ================= PAY =================
+
+payBtn.addEventListener("click", ()=>{
+
+    if(enteredPin.length < 4){
+
+        alert("Enter 4 digit PIN");
+
+        return;
+    }
+
+    completePayment();
+});
+
+// ================= SUCCESS =================
+
+function completePayment(){
+
+    const now = new Date();
+
+    const txn = {
+        name: detectedName,
+        upi: detectedUpi,
+        amount: amountInput.value,
+        time: now.toLocaleString(),
+        txnId:
+            "T" +
+            Date.now() +
+            Math.floor(Math.random()*9999),
+
+        utr:
+            Math.floor(
+                100000000000 +
+                Math.random()*900000000000
+            )
+    };
+
+    currentTransaction = txn;
+
+    transactions.unshift(txn);
+
+    sessionStorage.setItem(
+        "transactions",
+        JSON.stringify(transactions)
+    );
+
+    successAmount.innerText =
+        txn.amount;
+ 
+
+const day =
+    String(now.getDate()).padStart(2,'0');
+
+const months = [
+    "Jan","Feb","Mar","Apr",
+    "May","Jun","Jul","Aug",
+    "Sep","Oct","Nov","Dec"
+];
+
+const month =
+    months[now.getMonth()];
+
+const year =
+    now.getFullYear();
+
+let hours =
+    now.getHours();
+
+const minutes =
+    String(now.getMinutes())
+    .padStart(2,'0');
+
+const ampm =
+    hours >= 12 ? "PM" : "AM";
+
+hours = hours % 12;
+
+if(hours === 0)
+    hours = 12;
+
+const formattedTime =
+    `${day} ${month} ${year} at ${hours}:${minutes} ${ampm}`;
+
+document.getElementById("successTime")
+    .innerText = formattedTime;
+
+    successAudio.play();
+
+    showScreen(screens.success);
+}
+
+// ================= DETAILS =================
+
+function openDetailsScreen(){
+
+    if(!currentTransaction) return;
+
+    detailsName.innerText =
+        currentTransaction.name;
+
+    detailsUpi.innerText =
+        currentTransaction.upi;
+
+    detailsAmountEl.innerText =
+        currentTransaction.amount;
+
+    detailsDebitAmount.innerText =
+        currentTransaction.amount;
+
+    detailsTxnId.innerText =
+        currentTransaction.txnId;
+
+    detailsUtr.innerText =
+        currentTransaction.utr;
+
+    // FORMAT DATE LIKE REFERENCE
+
+    const d = new Date();
+
+    const formatted =
+        d.toLocaleTimeString(
+            [],
+            {
+                hour:'2-digit',
+                minute:'2-digit'
+            }
+        )
+        +
+        " pm on "
+        +
+        d.getDate()
+        +
+        " May 2026";
+
+    detailsDate.innerText =
+        formatted;
+
+    // INITIALS
+
+    const initials =
+        currentTransaction.name
+        .split(" ")
+        .map(n=>n[0])
+        .join("")
+        .substring(0,2);
+
+    detailsAvatar.innerText =
+        initials;
+
+    showScreen(screens.details);
+}
+
+viewDetailsBtn.addEventListener(
+    "click",
+    openDetailsScreen
+);
+
+detailsHistoryBtn.addEventListener(
+    "click",
+    ()=>{
+
+        renderHistory();
+
+        showScreen(screens.history);
+    }
+);
+
+// ================= HISTORY =================
+
+function renderHistory(){
+
+    historyList.innerHTML = "";
+
+    const saved =
+        JSON.parse(
+            sessionStorage.getItem("transactions")
+        ) || [];
+
+    // RECENT SESSION TRANSACTIONS
+
+    saved.forEach(txn=>{
+
+        addHistoryItem(
+            txn.name,
+            txn.amount,
+            "Today",
+            txn
+        );
+    });
+
+    // RANDOM OLD ENTRIES
+
+    const names = [
+        "Sanyasamma",
+        "Bonda Arudra",
+        "BURAN SHAIK",
+        "TALARI GOWRI",
+        "Ravi Kumar",
+        "Teja",
+        "Mahesh",
+        "Naresh",
+        "Kiran",
+        "Sai Ram"
+    ];
+
+    for(let i=0;i<10;i++){
+
+        const randomName =
+            names[
+                Math.floor(
+                    Math.random()*names.length
+                )
+            ];
+
+        const randomAmount =
+            Math.floor(
+                Math.random()*500
+            ) + 20;
+
+        addHistoryItem(
+            randomName,
+            randomAmount,
+            "1 day ago",
+            null
+        );
+    }
+}
+
+function addHistoryItem(
+    name,
+    amount,
+    time,
+    txnData
+){
+
+    const div =
+        document.createElement("div");
+
+    div.className = "historyItem";
+
+    div.innerHTML = `
+    
+        <div class="historyLeft">
+
+            <div class="historyArrow">
+                ↗
+            </div>
+
+            <div>
+
+                <div class="historyTextTop">
+                    Paid to
+                </div>
+
+                <div class="historyName">
+                    ${name}
+                </div>
+
+                <div class="historyTime">
+                    ${time}
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="historyRight">
+			<div class="historyTextTop">&nbsp; </div>
+
+            <div class="historyAmount">
+                ₹${amount}
+            </div>
+
+            <div class="historyBank">
+                Debited from <img src="icici.png">
+            </div>
+
+        </div>
+    `;
+
+    // CLICK ONLY FOR REAL SESSION ITEMS
+
+    if(txnData){
+
+        div.style.cursor = "pointer";
+
+        div.addEventListener("click", ()=>{
+
+            currentTransaction = txnData;
+
+            openDetailsScreen();
+        });
+    }
+
+    historyList.appendChild(div);
+}
+
+historyBtns.forEach(btn=>{
+    btn.addEventListener(
+        "click",
+        ()=>{
+            renderHistory();
+            showScreen(screens.history);
+        }
+    );
+});
+
+homeBtns.forEach(btn=>{
+
+    btn.addEventListener(
+        "click",
+        ()=>{
+
+            goHome();
+        }
+    );
+
+});
+
+
+// ===============================
+    // PWA SERVICE WORKER
+    // ===============================
+
+    if("serviceWorker" in navigator){
+
+        window.addEventListener("load", ()=>{
+
+            navigator.serviceWorker
+            .register("./sw.js")
+            .then(()=>{
+
+                console.log("PWA Ready");
+            })
+            .catch(err=>{
+
+                console.log(
+                    "SW registration failed",
+                    err
+                );
+            });
+
+        });
+    }
+	
+</script>
+
+</body>
+</html>
