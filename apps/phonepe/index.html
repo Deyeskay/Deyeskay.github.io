@@ -3013,20 +3013,38 @@ function openDetailsScreen(){
 
     const d = new Date();
 
-    const formatted =
-        d.toLocaleTimeString(
-            [],
-            {
-                hour:'2-digit',
-                minute:'2-digit'
-            }
-        )
-        +
-        " pm on "
-        +
-        d.getDate()
-        +
-        " May 2026";
+    let hours =
+    d.getHours();
+
+	const minutes =
+		String(d.getMinutes())
+		.padStart(2,'0');
+
+	const ampm =
+		hours >= 12 ? "pm" : "am";
+
+	hours = hours % 12;
+
+	if(hours === 0)
+		hours = 12;
+
+	hours =
+		String(hours).padStart(2,'0');
+
+	const months = [
+		"Jan","Feb","Mar","Apr",
+		"May","Jun","Jul","Aug",
+		"Sep","Oct","Nov","Dec"
+	];
+
+	const formatted =
+		`${hours}:${minutes} ${ampm} on `
+		+
+		`${d.getDate()} `
+		+
+		`${months[d.getMonth()]} `
+		+
+		`${d.getFullYear()}`;
 
     detailsDate.innerText =
         formatted;
