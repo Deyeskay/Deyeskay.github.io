@@ -706,7 +706,7 @@ body{
 #profileUpi{
     margin-top:5px;
     color:#777;
-    font-size:18px;
+    font-size:14px;
 }
 
 .payInputCard{
@@ -3186,20 +3186,27 @@ function extractData(text) {
     // =====================================================
 
     if (
-        text.includes("Proceed To Pay")
+        text
+        .toLowerCase()
+        .includes("proceed to pay")
     ) {
 
         // ===============================
         // DETECT UPI
         // Pattern:
         // something@something
-        // just before "Proceed To Pay"
         // ===============================
 
         const upiRegex =
             /([a-zA-Z0-9.\-_]+@[a-zA-Z]+)/g;
 
-        const allUpis = [...text.matchAll(upiRegex)];
+        const allUpis =
+            [...text.matchAll(upiRegex)];
+ 
+        // =================================================
+        // CASE 1A:
+        // VALID UPI FOUND
+        // =================================================
 
         if (allUpis.length) {
 
@@ -3207,30 +3214,148 @@ function extractData(text) {
                 allUpis[
                     allUpis.length - 1
                 ][0];
+ 
+            // ===============================
+            // NAME EXTRACTION
+            // between:
+            // "Pay"
+            // and detectedUpi
+            // ===============================
+
+            const splitText =
+                text.split(
+                    detectedUpi
+                )[0];
+
+            const payIndex =
+                splitText.indexOf("Pay");
+
+            if (payIndex !== -1) {
+
+                detectedName =
+                    splitText
+                    .substring(payIndex + 3)
+
+                    // remove symbols
+
+                    .replace(
+                        /[^a-zA-Z\s]/g,
+                        ''
+                    )
+
+                    // remove extra spaces
+
+                    .replace(
+                        /\s+/g,
+                        ' '
+                    )
+
+                    .trim();
+            }
         }
  
+        // =================================================
+        // CASE 1B:
+        // NO VALID UPI FOUND
+        // =================================================
+
+        else {
+
+            // ===============================
+            // NAME:
+            // between "Pay"
+            // and "Banking"
+            // ===============================
+
+            const nameRegex =
+                /Pay([\s\S]*?)Banking/i;
+
+            const nameMatch =
+                text.match(nameRegex);
+
+            if (nameMatch) {
+
+                detectedName =
+                    nameMatch[1]
+
+                    // remove special chars
+
+                    .replace(
+                        /[^a-zA-Z\s]/g,
+                        ''
+                    )
+
+                    // remove extra spaces
+
+                    .replace(
+                        /\s+/g,
+                        ' '
+                    )
+
+                    .trim();
+            }
+ 
+            // ===============================
+            // ID:
+            // between
+            // "Banking Name"
+            // and "Enter"
+            // ===============================
+
+            const idRegex =
+                /Banking Name([\s\S]*?)Enter/i;
+
+            const idMatch =
+                text.match(idRegex);
+
+            if (idMatch) {
+
+                detectedUpi =
+                    ("Banking Name" + idMatch[1])
+
+                    // keep text before [
+
+                    .split('[')[0]
+
+                    // clean spaces
+
+                    .replace(
+                        /\s+/g,
+                        ' '
+                    )
+
+                    .trim();
+            }
+        }
+    }
+ 
+    // =====================================================
+    // CASE 2:
+    // PAYTM STYLE SCREEN
+    // =====================================================
+
+    else {
+
         // ===============================
-        // NAME EXTRACTION
-        // between:
-        // "Pay"
-        // and detectedUpi
+        // NAME DETECTION
+        // Pattern:
+        // Banking name :
+        // Naveen Narava®@
+        // +919550737239
         // ===============================
 
-        const splitText =
-            text.split(
-                detectedUpi
-            )[0];
+        const nameRegex =
+            /Banking name\s*:?\s*([\s\S]*?)\+91\d{10}/i;
 
-        const payIndex =
-            splitText.indexOf("Pay");
+        const nameMatch =
+            text.match(nameRegex);
 
-        if (payIndex !== -1) {
+        if (nameMatch) {
 
             detectedName =
-                splitText
-                .substring(payIndex + 3)
+                nameMatch[1]
 
-                // remove symbols
+                // remove special chars
 
                 .replace(
                     /[^a-zA-Z\s]/g,
@@ -3246,44 +3371,11 @@ function extractData(text) {
 
                 .trim();
         }
-    }
- 
-    // =====================================================
-    // CASE 2:
-    // PAYTM STYLE SCREEN
-    // =====================================================
-    else {
-
-        // ===============================
-        // NAME DETECTION
-        // ===============================
-
-        const nameRegex =
-            /Banking name\s*:?\s*([\s\S]*?)\+91\d{10}/i;
-
-        const nameMatch =
-            text.match(nameRegex);
-
-        if (nameMatch) {
-
-            detectedName =
-                nameMatch[1]
-
-                .replace(
-                    /[^a-zA-Z\s]/g,
-                    ''
-                )
-
-                .replace(
-                    /\s+/g,
-                    ' '
-                )
-
-                .trim();
-        }
  
         // ===============================
         // PHONE DETECTION
+        // Example:
+        // +919550737239
         // ===============================
 
         const phoneRegex =
@@ -3293,7 +3385,9 @@ function extractData(text) {
             text.match(phoneRegex);
  
         // ===============================
-        // MASKED UPI
+        // MASKED UPI DETECTION
+        // Example:
+        // XXXXXX7239@ptyes
         // ===============================
 
         const maskedRegex =
@@ -3303,7 +3397,10 @@ function extractData(text) {
             text.match(maskedRegex);
  
         // ===============================
-        // FINAL UPI
+        // FINAL UPI CREATION
+        // 919550737239 + @ptyes
+        // =>
+        // 919550737239@ptyes
         // ===============================
 
         if (
@@ -3331,6 +3428,7 @@ function extractData(text) {
 
     showScreen(screens.payment);
 }
+
 // ================= UPDATE PAYMENT =================
 
 function updatePaymentUI(){
