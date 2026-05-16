@@ -1297,7 +1297,7 @@ body{
     width:48px;
     height:48px;
     border-radius:50%;
-    background:#f1e7ff;
+    background: #f4e7ff;
     color:#7c35e8;
     display:flex;
     align-items:center;
@@ -1371,7 +1371,7 @@ body{
 }
 
 .historyTitleRow h1{
-    font-size:24px;
+    font-size: 20px;
 }
 
 .statementBtn{
@@ -1385,9 +1385,9 @@ body{
 
 .historySearch{
     margin-top:24px;
-    background:#f4effd;
+    background: #f3f0f9;
     border-radius:45px;
-    height:62px;
+    height: 54px;
     display:flex;
     align-items:center;
     padding:0 22px;
@@ -1402,27 +1402,30 @@ body{
     border:none;
     background:none;
     width:100%;
-    font-size:18px;
+    font-size: 16px;
     outline:none;
 }
 
 .historyMonth{
-    padding:24px;
+    padding: 8px 28px;
     font-size:14px;
-    letter-spacing:5px;
+    letter-spacing: 3px;
     color:#777;
     font-weight:700;
+    padding-top: 30px;
+    background: #ffffff;
+    border-top: 3px solid #ddd;
 }
 
 .historyItem{
     background:white;
-    padding:24px;
+    padding: 18px;
     display:flex;
     align-items:center;
     justify-content:space-between;
     border-bottom:1px solid #eee;
-	cursor:pointer;
-	transition:0.2s;
+    cursor:pointer;
+    transition:0.2s;
 }
 
 .historyItem:active{
@@ -1437,31 +1440,31 @@ body{
 }
 
 .historyArrow{
-	width: 52px;
-    height: 52px;
-    border-radius: 18px;
-    background: #f6f6f6;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 34px;
-    margin-top: -20px;
+	width: 40px;
+	height: 40px;
+	border-radius: 12px;
+	background: #f6f6f6;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 28px;
+	margin-top: -20px;
 }
 
 .historyTextTop{
     color:#777;
-    font-size:14px;
+    font-size: 12px;
 }
 
 .historyName{
     margin-top:4px;
-    font-size:18px;
+    font-size: 16px;
 }
 
 .historyTime{
     margin-top:10px;
     color:#999;
-	font-size: 14px;
+    font-size: 12px;
 }
 
 .historyRight{
@@ -1469,17 +1472,17 @@ body{
 }
 
 .historyAmount{
-    font-size:20px;
+    font-size: 16px;
     font-weight:700;
-	margin-top: 5px;
+    margin-top: 5px;
     margin-bottom: 7px;
 }
 
 .historyBank{
     /*margin-top:16px;*/
     color:#999;
-	font-size: 14px;
-	display: flex;
+    font-size: 12px;
+    display: flex;
     gap: 4px;
     align-items: center;
 }
@@ -1758,6 +1761,10 @@ body{
     /* margin-top:-24px; */
     box-shadow:0 6px 14px rgba(0,0,0,0.18);
 }
+.scanBtn img{
+	width: 30px;
+	margin-top: 8px;
+}
 /* ======================================================
    CONTACTS SCREEN
 ====================================================== */
@@ -1799,7 +1806,7 @@ body{
 }
 
 .contactsHeader h1{
-    font-size: 18px;
+    font-size: 19px;
     font-weight:700;
     color:#111;
 }
@@ -1878,14 +1885,14 @@ body{
 }
 
 .splitTitle{
-    font-size: 15px;
+    font-size: 16px;
     font-weight: 100;
 }
 
 .splitSub{
     color:#888;
     margin-top:4px;
-    font-size: 13px;
+    font-size: 14px;
 }
 
 .splitAmount{
@@ -1894,7 +1901,7 @@ body{
     padding:5px 18px;
     border-radius:999px;
     font-weight:700;
-    font-size: 14px;
+    font-size: 15px;
 }
 
 /* TITLE */
@@ -1903,8 +1910,9 @@ body{
     padding: 0 22px;
     color: #777;
     letter-spacing: 2px;
-    font-size: 11px;
+    font-size: 12px;
     margin-bottom: 10px;
+    font-weight: bold;
 }
 
 /* CONTACT LIST */
@@ -1941,7 +1949,7 @@ body{
 
 .contactInfo h3{
     font-size: 16px;
-    font-weight: 200;
+    font-weight: 500;
     color: #111;
 }
 
@@ -1967,7 +1975,7 @@ body{
     border: none;
     border-radius: 8px;
     padding: 12px 15px;
-    font-size: 14px;
+    font-size: 16px;
     font-weight: 700;
     box-shadow: 0 8px 18px rgba(0, 0, 0, 0.2);
 }
@@ -2908,7 +2916,7 @@ body{
         </div>
 
         <button class="scanFab scanBtn">
-            <img src="scan_icon.png" class="bottombar-icons">
+            <img src="scan_icon.png" class="bottombar-icons" >
         </button>
 
         <div class="navItem">
@@ -3185,11 +3193,8 @@ function extractData(text) {
     // "Proceed To Pay"
     // =====================================================
 
-    if (
-        text
-        .toLowerCase()
-        .includes("proceed to pay")
-    ) {
+    if (text.toLowerCase().includes("proceed to pay")) 
+	{
 
         // ===============================
         // DETECT UPI
@@ -3333,93 +3338,100 @@ function extractData(text) {
     // CASE 2:
     // PAYTM STYLE SCREEN
     // =====================================================
+  
+	else {
 
-    else {
+		// =================================================
+		// NAME DETECTION
+		//
+		// Pattern:
+		//
+		// Transfer Money to
+		// Banking name: Naveen Narava @ 
+		//
+		// =================================================
 
-        // ===============================
-        // NAME DETECTION
-        // Pattern:
-        // Banking name :
-        // Naveen Narava®@
-        // +919550737239
-        // ===============================
+		const nameRegex =
+			/Transfer\s+Money\s+to[\s\S]*?Banking\s+name\s*:?\s*([a-zA-Z\s]+)[^a-zA-Z\s]/i;
 
-        const nameRegex =
-            /Banking name\s*:?\s*([\s\S]*?)\+91\d{10}/i;
+		const nameMatch =
+			text.match(nameRegex);
 
-        const nameMatch =
-            text.match(nameRegex);
+		if(nameMatch){
 
-        if (nameMatch) {
+			detectedName =
+				nameMatch[1]
 
-            detectedName =
-                nameMatch[1]
+				// remove extra spaces
 
-                // remove special chars
+				.replace(
+					/\s+/g,
+					' '
+				)
 
-                .replace(
-                    /[^a-zA-Z\s]/g,
-                    ''
-                )
+				.trim();
+		}
 
-                // remove extra spaces
 
-                .replace(
-                    /\s+/g,
-                    ' '
-                )
 
-                .trim();
-        }
- 
-        // ===============================
-        // PHONE DETECTION
-        // Example:
-        // +919550737239
-        // ===============================
+		// =================================================
+		// PHONE DETECTION
+		// Example:
+		// +919550737239
+		// =================================================
 
-        const phoneRegex =
-            /\+91\d{10}/;
+		const phoneRegex =
+			/\+91\d{10}/;
 
-        const phoneMatch =
-            text.match(phoneRegex);
- 
-        // ===============================
-        // MASKED UPI DETECTION
-        // Example:
-        // XXXXXX7239@ptyes
-        // ===============================
+		const phoneMatch =
+			text.match(phoneRegex);
 
-        const maskedRegex =
-            /X{6}\d{4}@([a-zA-Z]+)/i;
 
-        const maskedMatch =
-            text.match(maskedRegex);
- 
-        // ===============================
-        // FINAL UPI CREATION
-        // 919550737239 + @ptyes
-        // =>
-        // 919550737239@ptyes
-        // ===============================
 
-        if (
-            phoneMatch &&
-            maskedMatch
-        ) {
+		// =================================================
+		// MASKED UPI DETECTION
+		// Example:
+		// XXXXXX7239@ptyes
+		// =================================================
 
-            const phone =
-                phoneMatch[0]
-                .replace('+', '');
+		const maskedRegex =
+			/X{6}\d{4}@([a-zA-Z]+)/i;
 
-            const domain =
-                maskedMatch[1];
+		const maskedMatch =
+			text.match(maskedRegex);
 
-            detectedUpi =
-                `${phone}@${domain}`;
-        }
-    }
- 
+
+
+		// =================================================
+		// FINAL UPI CREATION
+		// =================================================
+
+		if(
+			phoneMatch &&
+			maskedMatch
+		){
+
+			const phone =
+				phoneMatch[0]
+				.replace('+','');
+
+			const domain =
+				maskedMatch[1];
+
+			detectedUpi =
+				`${phone}@${domain}`;
+		}
+
+
+
+		// =================================================
+		// NO UPI FOUND
+		// =================================================
+
+		else{ 
+			detectedUpi = `Banking Name : ${detectedName}`;
+		}
+	}
     // =====================================================
     // FINAL UI UPDATE
     // =====================================================
