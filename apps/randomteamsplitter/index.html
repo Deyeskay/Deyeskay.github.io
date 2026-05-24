@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Random Team Splitter</title>
+
+  <style>
+
+    *{
+      box-sizing:border-box;
+      font-family:Arial,sans-serif;
+    }
+
+    body{
+      margin:0;
+      min-height:100vh;
+      background:linear-gradient(135deg,#1e293b,#0f172a);
+      color:white;
+      padding:25px;
+    }
+
+    .container{
+      width:100%;
+      max-width:1000px;
+      margin:auto;
+      background:rgba(255,255,255,0.08);
+      border:1px solid rgba(255,255,255,0.1);
+      border-radius:24px;
+      padding:25px;
+      backdrop-filter:blur(10px);
+      box-shadow:0 10px 30px rgba(0,0,0,0.4);
+    }
+
+    h1{
+      margin-top:0;
+      text-align:center;
+      font-size:34px;
+      margin-bottom:30px;
+    }
+
+    .input-row{
+      display:flex;
+      gap:12px;
+      flex-wrap:wrap;
+    }
+
+    input{
+      flex:1;
+      min-width:220px;
+      padding:16px;
+      border:none;
+      border-radius:14px;
+      outline:none;
+      font-size:18px;
+    }
+
+    button{
+      border:none;
+      cursor:pointer;
+      border-radius:14px;
+      font-size:17px;
+      font-weight:bold;
+      transition:0.2s;
+    }
+
+    button:hover{
+      transform:scale(1.03);
+    }
+
+    .add-btn{
+      background:#22c55e;
+      color:white;
+      padding:16px 28px;
+    }
+
+    .split-btn{
+      width:100%;
+      background:#3b82f6;
+      color:white;
+      padding:18px;
+      margin-top:20px;
+    }
+
+    .players-header{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-top:30px;
+    }
+
+    .players-header h2{
+      margin:0;
+      font-size:40px;
+    }
+
+    .clear-link{
+      color:#93c5fd;
+      cursor:pointer;
+      text-decoration:underline;
+      font-size:15px;
+    }
+
+    .players-list{
+      display:flex;
+      flex-wrap:wrap;
+      gap:12px;
+      margin-top:20px;
+    }
+
+    .player-chip{
+      background:#334155;
+      padding:12px 16px;
+      border-radius:999px;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      font-size:16px;
+    }
+
+    .remove-btn{
+      background:#ef4444;
+      color:white;
+      width:24px;
+      height:24px;
+      border-radius:50%;
+      padding:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:14px;
+    }
+
+    .empty{
+      opacity:0.7;
+      margin-top:10px;
+    }
+
+    .teams-container{
+      margin-top:35px;
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+      gap:20px;
+    }
+
+    .team-card{
+      background:#1e293b;
+      border-radius:20px;
+      padding:20px;
+      border:1px solid rgba(255,255,255,0.08);
+    }
+
+    .team-title{
+      text-align:center;
+      margin-top:0;
+      margin-bottom:15px;
+      color:#60a5fa;
+      font-size:28px;
+    }
+
+    .team-member{
+      background:#334155;
+      padding:12px;
+      border-radius:12px;
+      margin-bottom:10px;
+      text-align:center;
+      font-size:17px;
+    }
+
+    .shuffle-wrapper{
+      grid-column:1/-1;
+    }
+
+    @media(max-width:600px){
+
+      body{
+        padding:12px;
+      }
+
+      .input-row{
+        flex-direction:column;
+      }
+
+      .add-btn{
+        width:100%;
+      }
+
+      .players-header h2{
+        font-size:30px;
+      }
+    }
+
+  </style>
+</head>
+
+<body>
+
+  <div class="container">
+
+    <h1>🎲 Random Team Splitter</h1>
+
+    <!-- ADD PLAYER -->
+    <div class="input-row">
+
+      <input
+        type="text"
+        id="playerName"
+        placeholder="Enter player name"
+      />
+
+      <button
+        class="add-btn"
+        onclick="addPlayer()"
+      >
+        Add Player
+      </button>
+
+    </div>
+
+    <!-- PLAYERS -->
+    <div class="players-header">
+
+      <h2>Players</h2>
+
+      <span
+        class="clear-link"
+        onclick="clearAllPlayers()"
+      >
+        Clear All
+      </span>
+
+    </div>
+
+    <div
+      class="players-list"
+      id="playersList"
+    ></div>
+
+    <!-- TEAM COUNT -->
+    <div
+      class="input-row"
+      style="margin-top:35px;"
+    >
+
+      <input
+        type="number"
+        id="teamCount"
+        min="1"
+        placeholder="Enter number of teams"
+      />
+
+    </div>
+
+    <!-- SPLIT BUTTON -->
+    <button
+      class="split-btn"
+      onclick="splitTeams()"
+    >
+      Split Teams
+    </button>
+
+    <!-- RESULT -->
+    <div
+      class="teams-container"
+      id="teamsContainer"
+    ></div>
+
+  </div>
+
+  <script>
+
+    // ===============================
+    // DEFAULT PLAYERS
+    // ===============================
+    let players = [
+      "viswa",
+      "sashi",
+      "tulasi",
+      "sneha",
+      "anjali",
+      "mounika",
+      "pavan",
+      "JS",
+      "CM",
+      "Raja",
+      "Deepika"
+    ];
+
+    // ===============================
+    // ADD PLAYER
+    // ===============================
+    function addPlayer(){
+
+      const input =
+        document.getElementById("playerName");
+
+      const name =
+        input.value.trim();
+
+      if(name === ""){
+
+        alert("Please enter player name");
+        return;
+      }
+
+      players.push(name);
+
+      input.value = "";
+
+      renderPlayers();
+    }
+
+    // ===============================
+    // REMOVE PLAYER
+    // ===============================
+    function removePlayer(index){
+
+      players.splice(index,1);
+
+      renderPlayers();
+    }
+
+    // ===============================
+    // CLEAR ALL
+    // ===============================
+    function clearAllPlayers(){
+
+	  const confirmClear =
+		confirm("Clear all players?");
+
+	  if(!confirmClear){
+		return;
+	  }
+
+	  // CLEAR PLAYER ARRAY
+	  players.length = 0;
+
+	  // CLEAR PLAYER UI
+	  const playersList =
+		document.getElementById("playersList");
+
+	  playersList.innerHTML = `
+		<div class="empty">
+		  No players added yet
+		</div>
+	  `;
+
+	  // CLEAR TEAM RESULTS
+	  document.getElementById(
+		"teamsContainer"
+	  ).innerHTML = "";
+
+	  // CLEAR INPUTS
+	  document.getElementById(
+		"playerName"
+	  ).value = "";
+
+	  document.getElementById(
+		"teamCount"
+	  ).value = "";
+	}
+
+    // ===============================
+    // RENDER PLAYERS
+    // ===============================
+    function renderPlayers(){
+
+      const playersList =
+        document.getElementById("playersList");
+
+      if(players.length === 0){
+
+        playersList.innerHTML = `
+          <div class="empty">
+            No players added yet
+          </div>
+        `;
+
+        return;
+      }
+
+      playersList.innerHTML = "";
+
+      players.forEach((player,index)=>{
+
+        const chip =
+          document.createElement("div");
+
+        chip.className = "player-chip";
+
+        chip.innerHTML = `
+          <span>${player}</span>
+
+          <button
+            class="remove-btn"
+            onclick="removePlayer(${index})"
+          >
+            ×
+          </button>
+        `;
+
+        playersList.appendChild(chip);
+
+      });
+
+    }
+
+    // ===============================
+    // SHUFFLE ARRAY
+    // ===============================
+    function shuffle(array){
+
+      for(let i=array.length-1;i>0;i--){
+
+        const j =
+          Math.floor(Math.random()*(i+1));
+
+        [array[i],array[j]] =
+        [array[j],array[i]];
+      }
+
+      return array;
+    }
+
+    // ===============================
+    // SPLIT TEAMS
+    // ===============================
+    function splitTeams(){
+
+      const teamCount =
+        parseInt(
+          document.getElementById(
+            "teamCount"
+          ).value
+        );
+
+      if(players.length === 0){
+
+        alert("Add players first");
+        return;
+      }
+
+      if(!teamCount || teamCount <= 0){
+
+        alert("Enter valid number of teams");
+        return;
+      }
+
+      if(teamCount > players.length){
+
+        alert(
+          "Teams cannot exceed number of players"
+        );
+
+        return;
+      }
+
+      const shuffledPlayers =
+        shuffle([...players]);
+
+      let teams = [];
+
+      // CREATE EMPTY TEAMS
+      for(let i=0;i<teamCount;i++){
+
+        teams.push([]);
+      }
+
+      // DISTRIBUTE PLAYERS
+      shuffledPlayers.forEach((player,index)=>{
+
+        teams[index % teamCount]
+          .push(player);
+
+      });
+
+      renderTeams(teams);
+    }
+
+    // ===============================
+    // RENDER TEAMS
+    // ===============================
+    function renderTeams(teams){
+
+      const container =
+        document.getElementById(
+          "teamsContainer"
+        );
+
+      container.innerHTML = "";
+
+      teams.forEach((team,index)=>{
+
+        const card =
+          document.createElement("div");
+
+        card.className = "team-card";
+
+        let membersHTML = "";
+
+        team.forEach(member=>{
+
+          membersHTML += `
+            <div class="team-member">
+              ${member}
+            </div>
+          `;
+
+        });
+
+        card.innerHTML = `
+          <h2 class="team-title">
+            Team ${index + 1}
+          </h2>
+
+          ${membersHTML}
+        `;
+
+        container.appendChild(card);
+
+      });
+
+      // ===============================
+      // SHUFFLE AGAIN BUTTON
+      // ===============================
+      const wrapper =
+        document.createElement("div");
+
+      wrapper.className = "shuffle-wrapper";
+
+      wrapper.innerHTML = `
+        <button
+          class="split-btn"
+          onclick="splitTeams()"
+        >
+          🔀 Shuffle Again
+        </button>
+      `;
+
+      container.appendChild(wrapper);
+
+    }
+
+    // ===============================
+    // ENTER KEY SUPPORT
+    // ===============================
+    document
+      .getElementById("playerName")
+      .addEventListener(
+        "keypress",
+        function(e){
+
+          if(e.key === "Enter"){
+
+            addPlayer();
+          }
+
+        }
+      );
+
+    // ===============================
+    // INITIAL RENDER
+    // ===============================
+    renderPlayers();
+
+  </script>
+
+</body>
+</html>
