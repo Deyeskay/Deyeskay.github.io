@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+/>
+
+<title>Apps Directory</title>
+
+<style>
+
+*{
+    box-sizing:border-box;
+    font-family:Arial,sans-serif;
+}
+
+body{
+    margin:0;
+    min-height:100vh;
+    background:#0f172a;
+    color:white;
+    padding:40px 20px;
+}
+
+.container{
+    max-width:1100px;
+    margin:auto;
+}
+
+h1{
+    font-size:42px;
+    margin-bottom:10px;
+}
+
+.subtitle{
+    color:#94a3b8;
+    margin-bottom:40px;
+    line-height:1.6;
+}
+
+.grid{
+    display:grid;
+    grid-template-columns:
+    repeat(auto-fit,minmax(260px,1fr));
+    gap:20px;
+}
+
+.card{
+    background:#1e293b;
+    border-radius:22px;
+    padding:24px;
+    text-decoration:none;
+    color:white;
+    transition:0.25s;
+    border:1px solid rgba(255,255,255,0.08);
+    position:relative;
+    overflow:hidden;
+}
+
+.card:hover{
+    transform:translateY(-5px);
+    background:#334155;
+}
+
+.icon{
+    font-size:46px;
+    margin-bottom:16px;
+}
+
+.app-name{
+    font-size:24px;
+    font-weight:bold;
+    margin-bottom:10px;
+    word-break:break-word;
+}
+
+.desc{
+    color:#cbd5e1;
+    line-height:1.5;
+}
+
+.loading{
+    color:#94a3b8;
+    font-size:18px;
+}
+
+.topbar{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:25px;
+    flex-wrap:wrap;
+    gap:15px;
+}
+
+.refresh-btn{
+    border:none;
+    background:#2563eb;
+    color:white;
+    padding:12px 18px;
+    border-radius:12px;
+    cursor:pointer;
+    font-size:15px;
+    font-weight:bold;
+    transition:0.2s;
+}
+
+.refresh-btn:hover{
+    transform:scale(1.03);
+}
+
+.stats{
+    margin-top:35px;
+    color:#94a3b8;
+    font-size:14px;
+}
+
+.error{
+    background:#7f1d1d;
+    padding:18px;
+    border-radius:14px;
+    color:white;
+}
+
+.footer{
+    margin-top:60px;
+    text-align:center;
+    color:#64748b;
+    font-size:14px;
+}
+
+.badge{
+    position:absolute;
+    top:14px;
+    right:14px;
+    background:#0f172a;
+    border:1px solid rgba(255,255,255,0.08);
+    padding:6px 10px;
+    border-radius:999px;
+    font-size:12px;
+    color:#cbd5e1;
+}
+
+@media(max-width:600px){
+
+    body{
+        padding:20px 14px;
+    }
+
+    h1{
+        font-size:32px;
+    }
+
+    .topbar{
+        flex-direction:column;
+        align-items:flex-start;
+    }
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <div class="topbar">
+
+        <div>
+
+            <h1>📂 Apps Directory</h1>
+
+            <div class="subtitle">
+                Dynamically loaded from GitHub repository folders
+            </div>
+
+        </div>
+
+        <button
+            class="refresh-btn"
+            onclick="loadApps()"
+        >
+            🔄 Refresh
+        </button>
+
+    </div>
+
+    <div
+        class="grid"
+        id="appsGrid"
+    >
+
+        <div class="loading">
+            Loading apps...
+        </div>
+
+    </div>
+
+    <div
+        class="stats"
+        id="stats"
+    ></div>
+
+    <div class="footer">
+        Powered by GitHub API
+    </div>
+
+</div>
+
+<script>
+
+// =========================================
+// CONFIGURATION
+// =========================================
+
+// YOUR GITHUB USERNAME
+const username = "Deyeskay";
+
+// YOUR REPOSITORY NAME
+// Example:
+// Deyeskay.github.io
+const repo = "Deyeskay.github.io";
+
+// PATH INSIDE REPO
+// Since your folders are in /apps/
+const repoPath = "apps";
+
+// =========================================
+// ICONS
+// =========================================
+
+const icons = [
+    "🎮",
+    "🚀",
+    "📱",
+    "🎲",
+    "⚡",
+    "🧠",
+    "🎨",
+    "💡",
+    "🛠️",
+    "📦"
+];
+
+// =========================================
+// RANDOM ICON
+// =========================================
+
+function getRandomIcon(){
+
+    return icons[
+        Math.floor(
+            Math.random() * icons.length
+        )
+    ];
+}
+
+// =========================================
+// LOAD APPS
+// =========================================
+
+async function loadApps(){
+
+    const grid =
+        document.getElementById(
+            "appsGrid"
+        );
+
+    const stats =
+        document.getElementById(
+            "stats"
+        );
+
+    grid.innerHTML = `
+        <div class="loading">
+            Loading apps...
+        </div>
+    `;
+
+    stats.innerHTML = "";
+
+    try{
+
+        // =================================
+        // FETCH GITHUB FOLDERS
+        // =================================
+
+        const response = await fetch(
+            `https://api.github.com/repos/${username}/${repo}/contents/${repoPath}`
+        );
+
+        if(!response.ok){
+
+            throw new Error(
+                "GitHub API request failed"
+            );
+        }
+
+        const data =
+            await response.json();
+
+        // =================================
+        // FILTER ONLY DIRECTORIES
+        // =================================
+
+        const folders =
+            data.filter(
+                item => item.type === "dir"
+            );
+
+        // =================================
+        // EMPTY
+        // =================================
+
+        if(folders.length === 0){
+
+            grid.innerHTML = `
+                <div class="loading">
+                    No apps found
+                </div>
+            `;
+
+            return;
+        }
+
+        // =================================
+        // CLEAR
+        // =================================
+
+        grid.innerHTML = "";
+
+        // =================================
+        // CREATE CARDS
+        // =================================
+
+        folders.forEach(folder=>{
+
+            const card =
+                document.createElement("a");
+
+            card.className = "card";
+
+            card.href =
+                `./${folder.name}/`;
+
+            card.innerHTML = `
+
+                <div class="badge">
+                    APP
+                </div>
+
+                <div class="icon">
+                    ${getRandomIcon()}
+                </div>
+
+                <div class="app-name">
+                    ${folder.name}
+                </div>
+
+                <div class="desc">
+                    Open ${folder.name}
+                </div>
+            `;
+
+            grid.appendChild(card);
+
+        });
+
+        // =================================
+        // STATS
+        // =================================
+
+        stats.innerHTML = `
+            Total Apps:
+            <b>${folders.length}</b>
+        `;
+
+    }catch(error){
+
+        console.error(error);
+
+        grid.innerHTML = `
+
+            <div class="error">
+
+                Failed to load apps.<br><br>
+
+                Check:
+                <br><br>
+
+                • GitHub username<br>
+                • Repository name<br>
+                • apps folder exists<br>
+                • GitHub Pages enabled
+
+            </div>
+        `;
+    }
+}
+
+// =========================================
+// INITIAL LOAD
+// =========================================
+
+loadApps();
+
+</script>
+
+</body>
+</html>
