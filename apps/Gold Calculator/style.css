@@ -190,10 +190,47 @@ label {
 }
 
 /* Conditional Padding when Prefixes/Suffixes are Present */
-.input-wrapper input[id="goldPrice"], 
-.input-wrapper input[id="loanAmount"],
+.input-wrapper input[id="goldPrice"],
+.input-wrapper input[id="loanAmount"] {
+    padding-left: 32px;
+}
+
 .input-wrapper input[id="futurePrice"] {
     padding-left: 32px;
+    padding-right: 42px;
+}
+
+/* AI Predict Trigger Button */
+.predict-btn {
+    position: absolute;
+    right: 6px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: none;
+    background: var(--gold-gradient);
+    color: #111;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 0.75rem;
+    transition: var(--transition);
+    box-shadow: 0 2px 8px rgba(212, 175, 55, 0.35);
+}
+
+.predict-btn:hover {
+    transform: scale(1.08);
+}
+
+.predict-btn:disabled {
+    opacity: 0.65;
+    cursor: wait;
+    transform: none;
+}
+
+.ai-helper-text {
+    color: var(--gold);
 }
 
 .input-wrapper input[id="goldQty"],

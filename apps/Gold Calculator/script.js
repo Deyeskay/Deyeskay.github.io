@@ -12,6 +12,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const targetPctGroup = document.getElementById('targetPctGroup');
     const futurePriceInput = document.getElementById('futurePrice');
     const growthPctInput = document.getElementById('growthPct');
+    const predictPriceBtn = document.getElementById('predictPriceBtn');
+    const predictHelper = document.getElementById('predictHelper');
     
     const estCostTodayLabel = document.getElementById('estCostToday');
     const calculateBtn = document.getElementById('calculateBtn');
@@ -190,6 +192,40 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     futurePriceInput.addEventListener('input', () => synchronizeExpectationValues('priceToPct'));
     growthPctInput.addEventListener('input', () => synchronizeExpectationValues('pctToPrice'));
+
+    // --- AI Future Price Prediction (Puter.js — visitors sign in free on first use) ---
+    predictPriceBtn.addEventListener('click', async () => {
+        const months = parseInt(loanDurationSelect.value) || 12;
+        const prompt = `Using the latest market data, estimate the probability-weighted expected 24K gold price per gram in India after ${months} months. Return only one number in ₹/g.`;
+
+        const originalIcon = predictPriceBtn.innerHTML;
+        predictPriceBtn.disabled = true;
+        predictPriceBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+        predictHelper.classList.add('hidden');
+
+        try {
+            const response = await puter.ai.chat(prompt);
+            const content = response?.message?.content ?? response;
+            const textOutput = Array.isArray(content)
+                ? content.map(part => part.text || '').join(' ')
+                : String(content);
+
+            const match = textOutput.replace(/,/g, '').match(/\d+(\.\d+)?/);
+            if (!match) {
+                throw new Error('No numeric value found in AI response');
+            }
+
+            futurePriceInput.value = Math.round(parseFloat(match[0]));
+            synchronizeExpectationValues('priceToPct');
+            predictHelper.classList.remove('hidden');
+        } catch (err) {
+            console.error('AI prediction failed:', err);
+            alert('AI prediction failed. Please check your connection and try again.');
+        } finally {
+            predictPriceBtn.disabled = false;
+            predictPriceBtn.innerHTML = originalIcon;
+        }
+    });
 
     // Accordion Control Toggle
     toggleAccordion.addEventListener('click', () => {
