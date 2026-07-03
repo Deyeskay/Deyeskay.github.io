@@ -319,7 +319,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Chart JS Implementation Matrix ---
     const renderComparisonChart = (outflowNow, assetValueLater, outflowLater) => {
-        const ctx = document.getElementById('comparisonComparisonChart');
         const isDark = document.body.getAttribute('data-theme') !== 'light';
         
         const labelColor = isDark ? '#9fa0b2' : '#616770';
