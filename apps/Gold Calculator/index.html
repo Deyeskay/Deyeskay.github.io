@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gold Investment Decision Calculator</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <header>
+            <div class="header-top">
+                <div class="logo"><i class="fa-solid fa-coins gold-text"></i> AuraGold</div>
+                <button id="themeToggle" class="icon-btn" aria-label="Toggle Theme">
+                    <i class="fa-solid fa-sun"></i>
+                </button>
+            </div>
+            <h1>Gold Investment Decision Calculator</h1>
+            <p class="subtitle">"Should I take a gold loan to buy gold now or wait?"</p>
+        </header>
+
+        <main id="calcApp">
+            <div class="card input-card">
+                <div class="card-header">
+                    <h2><i class="fa-solid fa-sliders text-gold"></i> Investment Parameters</h2>
+                    <button id="resetBtn" class="text-btn"><i class="fa-solid fa-rotate-left"></i> Reset</button>
+                </div>
+
+                <div class="input-group">
+                    <label for="goldPrice">Current Gold Price (per gram ₹)</label>
+                    <div class="input-wrapper">
+                        <span class="prefix">₹</span>
+                        <input type="number" id="goldPrice" value="10250" placeholder="e.g. 10250" min="1">
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label for="goldQty">Gold Quantity (Grams)</label>
+                    <div class="input-wrapper">
+                        <input type="number" id="goldQty" value="50" placeholder="e.g. 50" min="0.1" step="0.1">
+                        <span class="suffix">g</span>
+                    </div>
+                </div>
+
+                <div class="info-row">
+                    <span>Estimated Cost Today:</span>
+                    <span id="estCostToday" class="fw-600">₹0</span>
+                </div>
+
+                <div class="input-group">
+                    <label for="loanAmount">Loan Amount (₹)</label>
+                    <div class="input-wrapper">
+                        <span class="prefix">₹</span>
+                        <input type="number" id="loanAmount" value="512500" placeholder="Amount to borrow">
+                    </div>
+                    <small class="helper-text">Auto-suggested based on current cost (Editable)</small>
+                </div>
+
+                <div class="input-group">
+                    <div class="label-val">
+                        <label for="interestRate">Annual Interest Rate (%)</label>
+                        <span class="slider-val" id="interestRateVal">9%</span>
+                    </div>
+                    <input type="range" id="interestRate" min="5" max="25" step="0.25" value="9">
+                    <input type="number" id="interestRateNum" min="5" max="25" step="0.25" value="9" class="num-slider-backup">
+                </div>
+
+                <div class="input-group">
+                    <label for="loanDuration">Loan Duration (Months)</label>
+                    <div class="select-wrapper">
+                        <select id="loanDuration">
+                            <option value="3">3 Months</option>
+                            <option value="6">6 Months</option>
+                            <option value="9">9 Months</option>
+                            <option value="12" selected>12 Months</option>
+                            <option value="18">18 Months</option>
+                            <option value="24">24 Months</option>
+                            <option value="36">36 Months</option>
+                        </select>
+                        <i class="fa-solid fa-chevron-down select-arrow"></i>
+                    </div>
+                </div>
+
+                <div class="input-group expectation-container">
+                    <label>Expected Future Gold Valuation</label>
+                    <div class="toggle-switch-container">
+                        <button type="button" class="toggle-tab active" data-target="targetPrice">Future Price/g</button>
+                        <button type="button" class="toggle-tab" data-target="targetPct">Yearly Growth %</button>
+                    </div>
+
+                    <div id="targetPriceGroup" class="expectation-input-wrapper active">
+                        <div class="input-wrapper">
+                            <span class="prefix">₹</span>
+                            <input type="number" id="futurePrice" value="11787" placeholder="Future price per gram">
+                        </div>
+                    </div>
+
+                    <div id="targetPctGroup" class="expectation-input-wrapper">
+                        <div class="input-wrapper">
+                            <input type="number" id="growthPct" value="15" placeholder="e.g. 15">
+                            <span class="suffix">%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="cta-container">
+                <button id="calculateBtn" class="ripple-btn main-cta">
+                    <span>Calculate Investment</span>
+                    <i class="fa-solid fa-arrow-trend-up"></i>
+                </button>
+            </div>
+
+            <div id="resultsSection" class="results-layout hidden">
+                
+                <div id="comparisonVerdictCard" class="card verdict-card">
+                    </div>
+
+                <div class="grid-2-col">
+                    <div class="card metric-card buy-now">
+                        <h3><i class="fa-solid fa-bolt text-gold"></i> Option A: Buy Now With Loan</h3>
+                        <div class="metric-row"><span>Gold Cost Today</span><span id="resCostToday">₹0</span></div>
+                        <div class="metric-row"><span>Loan Amount Taken</span><span id="resLoanAmt">₹0</span></div>
+                        <div class="metric-row text-danger"><span>Interest Accumulation</span><span id="resInterest">₹0</span></div>
+                        <div class="metric-row Highlight"><span>Total Outflow Repayment</span><span id="resTotalRepay" class="fw-600">₹0</span></div>
+                        <div class="metric-divider"></div>
+                        <div class="metric-row text-success"><span>Future Valuation Assets</span><span id="resFutureVal">₹0</span></div>
+                        <div class="metric-row net-return-row"><span>Net Yield / Profit</span><span id="resNetProfit" class="fw-700">₹0</span></div>
+                    </div>
+
+                    <div class="card metric-card wait-later">
+                        <h3><i class="fa-solid fa-hourglass-half text-blue"></i> Option B: Wait & Buy Later</h3>
+                        <div class="metric-row"><span>Future Projected Price/g</span><span id="resFuturePricePerG">₹0</span></div>
+                        <div class="metric-row Highlight"><span>Future Absolute Cost</span><span id="resFutureCost">₹0</span></div>
+                        <div class="metric-divider"></div>
+                        <div class="metric-row explanation-row">
+                            <span id="waitExplanation">Extra allocation needed or savings realized will appear here.</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card breakeven-card">
+                    <h3><i class="fa-solid fa-scale-balanced text-gold"></i> Threshold Break-Even Analysis</h3>
+                    <div class="breakeven-grid">
+                        <div class="be-box">
+                            <span class="be-lbl">Break-Even Future Price</span>
+                            <span class="be-val" id="bePrice">₹0 / g</span>
+                        </div>
+                        <div class="be-box">
+                            <span class="be-lbl">Required Appreciation Rate</span>
+                            <span class="be-val" id="bePct">0.0%</span>
+                        </div>
+                    </div>
+                    <p class="be-statement" id="beStatement"></p>
+                </div>
+
+                <div class="card chart-card">
+                    <h3><i class="fa-solid fa-chart-simple text-gold"></i> Capital Outflow & Valuation Overview</h3>
+                    <div class="chart-container">
+                        <canvas id="comparisonChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="card accordion-card">
+                    <button class="accordion-header" id="toggleAccordion">
+                        <span><i class="fa-solid fa-circle-info text-gold"></i> Detailed Debt & Cost Breakdown</span>
+                        <i class="fa-solid fa-chevron-down arrow-icon"></i>
+                    </button>
+                    <div class="accordion-content id="accordionContent">
+                        <table class="details-table">
+                            <tbody>
+                                <tr><td>Principal Borrowed</td><td id="tablePrincipal">₹0</td></tr>
+                                <tr><td>Interest Rate Structure</td><td id="tableRate">0% Simple Interest</td></tr>
+                                <tr><td>Absolute Interest Asset Cost</td><td id="tableInterest" class="text-danger">₹0</td></tr>
+                                <tr><td>Gross Settlement Outlay</td><td id="tableTotal">₹0</td></tr>
+                                <tr class="table-highlight"><td>Monthly Interest Apportionment</td><td id="tableMonthlyInterest">₹0 / Mo</td></tr>
+                                <tr class="table-highlight"><td>Realized Outlay Per Gram</td><td id="tableCostPerGram">₹0 / g</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card insights-card">
+                    <h3><i class="fa-solid fa-lightbulb text-gold"></i> Strategic Action Insights</h3>
+                    <ul class="insights-list" id="insightsContainer">
+                        </ul>
+                </div>
+
+                <div class="action-matrix">
+                    <button id="shareBtn" class="action-btn share-btn"><i class="fa-solid fa-share-nodes"></i> Share Assessment</button>
+                    <button id="downloadBtn" class="action-btn download-btn"><i class="fa-solid fa-file-image"></i> Save PNG Analysis</button>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <div id="toast" class="toast hidden">Copied Analysis Data to Clipboard!</div>
+</body>
+</html>
