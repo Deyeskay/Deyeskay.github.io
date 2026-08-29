@@ -1,0 +1,3805 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0,
+               maximum-scale=1.0, user-scalable=no">
+
+<title>Snack Bowl Cost & Profit Calculator</title>
+
+<style>
+:root {
+    --bg: #09090b;
+    --card: #171719;
+    --card2: #1e1e21;
+    --input: #111113;
+    --border: #303035;
+    --text: #f5f5f7;
+    --muted: #99999f;
+    --accent: #ff8a00;
+    --accent-soft: rgba(255,138,0,.12);
+    --green: #35d48a;
+    --green-soft: rgba(53,212,138,.12);
+    --red: #ff5c5c;
+    --red-soft: rgba(255,92,92,.12);
+    --yellow: #ffc857;
+}
+
+* {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family:
+        Inter,
+        Roboto,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+}
+
+body {
+    min-height: 100vh;
+}
+
+button,
+input {
+    font: inherit;
+}
+
+button {
+    cursor: pointer;
+}
+
+.app {
+    width: 100%;
+    max-width: 920px;
+    margin: auto;
+    padding: 16px 12px 50px;
+}
+
+/* =========================================================
+   HEADER
+========================================================= */
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+.brand-mark {
+    flex: none;
+    width: 40px;
+    height: 40px;
+    display: grid;
+    place-items: center;
+    font-size: 20px;
+    border-radius: 13px;
+    background: var(--accent-soft);
+    border: 1px solid rgba(255,138,0,.3);
+}
+
+.title {
+    font-size: 21px;
+    font-weight: 850;
+    letter-spacing: -.5px;
+}
+
+.subtitle {
+    color: var(--muted);
+    font-size: 11.5px;
+    margin-top: 2px;
+}
+
+/* =========================================================
+   MODE SWITCH
+========================================================= */
+
+.mode-switch {
+    display: flex;
+    flex: none;
+    padding: 4px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+}
+
+.mode-switch button {
+    min-height: 40px;
+    padding: 0 16px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 750;
+    transition: background .15s ease, color .15s ease;
+}
+
+.mode-switch button.active {
+    background: var(--accent);
+    color: #111;
+}
+
+/* =========================================================
+   STICKY MINI BAR
+========================================================= */
+
+.sticky-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 30;
+    background: rgba(23,23,25,.92);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    transition: transform .22s ease, opacity .22s ease;
+}
+
+.sticky-bar.is-hidden {
+    opacity: 0;
+    transform: translateY(-100%);
+    pointer-events: none;
+}
+
+.sticky-bar-inner {
+    max-width: 920px;
+    margin: auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+}
+
+.sb-stat {
+    flex: 1;
+    min-width: 0;
+}
+
+.sb-label {
+    color: var(--muted);
+    font-size: 9.5px;
+    letter-spacing: .4px;
+    text-transform: uppercase;
+}
+
+.sb-value {
+    font-size: 15px;
+    font-weight: 850;
+    overflow-wrap: anywhere;
+    line-height: 1.25;
+}
+
+.sb-divider {
+    flex: none;
+    width: 1px;
+    height: 26px;
+    background: var(--border);
+}
+
+/* =========================================================
+   SECTIONS
+========================================================= */
+
+.section-title {
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: .8px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 22px 2px 9px;
+}
+
+.section-description {
+    color: var(--muted);
+    font-size: 11px;
+    line-height: 1.55;
+    margin-bottom: 12px;
+}
+
+.card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 14px;
+}
+
+/* =========================================================
+   COLLAPSIBLE INPUT SECTIONS
+========================================================= */
+
+.panel {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    margin-bottom: 10px;
+    overflow: hidden;
+}
+
+.panel > summary {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 56px;
+    padding: 10px 14px;
+    list-style: none;
+    cursor: pointer;
+    user-select: none;
+}
+
+.panel > summary::-webkit-details-marker {
+    display: none;
+}
+
+.panel > summary:hover {
+    background: var(--card2);
+}
+
+.panel-icon {
+    flex: none;
+    width: 32px;
+    height: 32px;
+    display: grid;
+    place-items: center;
+    font-size: 15px;
+    border-radius: 10px;
+    background: var(--card2);
+    border: 1px solid var(--border);
+}
+
+.panel-heading {
+    flex: 1;
+    min-width: 0;
+}
+
+.panel-name {
+    font-size: 14px;
+    font-weight: 800;
+}
+
+.panel-hint {
+    color: var(--muted);
+    font-size: 10.5px;
+    margin-top: 2px;
+}
+
+.panel-badge {
+    flex: none;
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: var(--accent-soft);
+    border: 1px solid rgba(255,138,0,.28);
+    color: #ffb04a;
+    font-size: 11px;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.panel-chevron {
+    flex: none;
+    color: var(--muted);
+    font-size: 11px;
+    transition: transform .2s ease;
+}
+
+.panel[open] > summary .panel-chevron {
+    transform: rotate(180deg);
+}
+
+.panel[open] > summary {
+    border-bottom: 1px solid var(--border);
+}
+
+.panel-body {
+    padding: 14px;
+}
+
+/* =========================================================
+   INPUTS
+========================================================= */
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 11px;
+}
+
+.field label {
+    display: block;
+    color: var(--muted);
+    font-size: 11px;
+    margin-bottom: 6px;
+}
+
+.field input {
+    width: 100%;
+    min-height: 46px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--input);
+    color: var(--text);
+    padding: 10px 12px;
+    font-size: 16px;
+    outline: none;
+}
+
+.field input:focus {
+    border-color: var(--accent);
+}
+
+/*
+ * Read-only fields are calculated elsewhere. Styled as a
+ * readout rather than something you can type into.
+ */
+
+.field input[readonly] {
+    background: var(--card2);
+    border-style: dashed;
+    color: #ffb04a;
+    font-weight: 800;
+    cursor: default;
+}
+
+.field input[readonly]:focus {
+    border-color: var(--border);
+}
+
+.field-note {
+    color: var(--muted);
+    font-size: 10px;
+    line-height: 1.45;
+    margin-top: 6px;
+}
+
+/* =========================================================
+   RECIPE
+========================================================= */
+
+.recipe-header,
+.recipe-row {
+    display: grid;
+    grid-template-columns:
+        minmax(125px, 1.4fr)
+        minmax(80px, .8fr)
+        minmax(85px, .8fr)
+        minmax(75px, .7fr);
+    gap: 8px;
+    align-items: center;
+}
+
+.recipe-header {
+    color: var(--muted);
+    font-size: 10px;
+    padding-bottom: 7px;
+}
+
+.recipe-row {
+    border-top: 1px solid var(--border);
+    padding: 9px 0;
+}
+
+.ingredient-name {
+    font-size: 13px;
+    font-weight: 750;
+}
+
+.ingredient-unit {
+    color: var(--muted);
+    font-size: 10px;
+    margin-top: 2px;
+}
+
+.recipe-row input {
+    width: 100%;
+    min-height: 40px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--input);
+    color: var(--text);
+    padding: 8px;
+    font-size: 14px;
+    outline: none;
+}
+
+.recipe-row input:focus {
+    border-color: var(--accent);
+}
+
+.recipe-cost {
+    text-align: right;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+/* =========================================================
+   PACKAGING TABLE
+========================================================= */
+
+.pack-header,
+.pack-row {
+    display: grid;
+    grid-template-columns:
+        minmax(130px, 1.35fr)
+        minmax(75px, .7fr)
+        minmax(75px, .7fr)
+        minmax(80px, .7fr);
+    gap: 8px;
+    align-items: center;
+}
+
+.pack-header {
+    color: var(--muted);
+    font-size: 10px;
+    padding-bottom: 7px;
+}
+
+.pack-row {
+    border-top: 1px solid var(--border);
+    padding: 9px 0;
+}
+
+.pack-name {
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.pack-detail {
+    color: var(--muted);
+    font-size: 10px;
+    margin-top: 2px;
+}
+
+.pack-row input {
+    width: 100%;
+    min-height: 40px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--input);
+    color: var(--text);
+    padding: 8px;
+    font-size: 14px;
+}
+
+.pack-cost {
+    text-align: right;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+/* =========================================================
+   KPI
+========================================================= */
+
+.bento {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.tile {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 14px;
+    min-width: 0;
+}
+
+.span-6 { grid-column: span 6; }
+.span-3 { grid-column: span 3; }
+.span-2 { grid-column: span 2; }
+
+.tile-hero {
+    position: relative;
+    overflow: hidden;
+    padding: 18px;
+    border-color: rgba(255,138,0,.4);
+    background:
+        radial-gradient(
+            120% 160% at 0% 0%,
+            rgba(255,138,0,.13),
+            transparent 62%
+        ),
+        var(--card);
+}
+
+.tile-hero .kpi-value {
+    font-size: 34px;
+    letter-spacing: -1px;
+    margin-top: 7px;
+}
+
+.tile-mid .kpi-value {
+    font-size: 23px;
+}
+
+.tile-sm {
+    background: var(--card2);
+    padding: 12px;
+}
+
+.tile-sm .kpi-value {
+    font-size: 16px;
+}
+
+.kpi-label {
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 650;
+}
+
+.tile-sm .kpi-label {
+    font-size: 10px;
+}
+
+.kpi-value {
+    margin-top: 5px;
+    font-size: 20px;
+    font-weight: 850;
+    overflow-wrap: anywhere;
+    line-height: 1.2;
+}
+
+.kpi-sub {
+    margin-top: 7px;
+    color: var(--muted);
+    font-size: 11.5px;
+}
+
+.tile-sm .kpi-sub {
+    margin-top: 4px;
+    font-size: 10px;
+    line-height: 1.4;
+}
+
+.kpi-sub strong {
+    color: var(--text);
+}
+
+.green {
+    color: var(--green);
+}
+
+.red {
+    color: var(--red);
+}
+
+.yellow {
+    color: var(--yellow);
+}
+
+/* =========================================================
+   BREAKDOWN
+========================================================= */
+
+.breakdown-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+}
+
+.breakdown-row:last-child {
+    border-bottom: 0;
+}
+
+.breakdown-row span:first-child {
+    color: var(--muted);
+}
+
+.breakdown-row strong {
+    white-space: nowrap;
+}
+
+.breakdown-row.total {
+    margin-top: 4px;
+    padding-top: 13px;
+    border-top: 1px solid var(--border);
+    border-bottom: 0;
+    font-size: 14px;
+}
+
+.breakdown-row.total strong:first-child {
+    letter-spacing: .4px;
+    text-transform: uppercase;
+    font-size: 11.5px;
+    color: var(--muted);
+}
+
+.breakdown-row.total strong:last-child {
+    font-size: 17px;
+}
+
+/* =========================================================
+   BAR
+========================================================= */
+
+.cost-bar {
+    height: 9px;
+    margin-top: 12px;
+    background: #0e0e10;
+    border-radius: 99px;
+    overflow: hidden;
+}
+
+.cost-bar-fill {
+    height: 100%;
+    width: 0%;
+    background: var(--accent);
+    border-radius: 99px;
+    transition: width .2s ease;
+}
+
+.bar-label {
+    color: var(--muted);
+    font-size: 10px;
+    margin-top: 6px;
+}
+
+/* =========================================================
+   INVENTORY
+========================================================= */
+
+.inventory-wrap {
+    overflow-x: auto;
+}
+
+.inventory-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+
+.inventory-table th,
+.inventory-table td {
+    padding: 9px 5px;
+    border-bottom: 1px solid var(--border);
+    text-align: right;
+    white-space: nowrap;
+}
+
+.inventory-table th:first-child,
+.inventory-table td:first-child {
+    text-align: left;
+}
+
+.inventory-table th {
+    color: var(--muted);
+    font-size: 10px;
+}
+
+.inventory-table tr.inv-group td {
+    padding-top: 14px;
+    color: var(--accent);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .7px;
+    text-transform: uppercase;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+}
+
+.inventory-table tr.inv-group:first-child td {
+    padding-top: 4px;
+}
+
+/* =========================================================
+   INFO BOX
+========================================================= */
+
+.info-box {
+    padding: 12px;
+    border-radius: 14px;
+    border: 1px solid rgba(255,138,0,.25);
+    background: rgba(255,138,0,.06);
+    color: #d2d2d5;
+    font-size: 11px;
+    line-height: 1.55;
+}
+
+.info-box strong {
+    color: #ffb04a;
+}
+
+/* =========================================================
+   BUTTON
+========================================================= */
+
+.actions {
+    display: flex;
+    gap: 9px;
+    flex-wrap: wrap;
+    margin-top: 14px;
+}
+
+.btn {
+    min-height: 45px;
+    padding: 10px 15px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--text);
+    font-weight: 750;
+}
+
+.btn.primary {
+    background: var(--accent);
+    color: #111;
+    border-color: var(--accent);
+}
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 560px) {
+
+    .app {
+        padding: 13px 9px 40px;
+    }
+
+    .title {
+        font-size: 18px;
+    }
+
+    .card,
+    .panel,
+    .tile {
+        border-radius: 16px;
+    }
+
+    .card,
+    .panel-body {
+        padding: 12px;
+    }
+
+    .header {
+        gap: 10px;
+    }
+
+    .mode-switch {
+        flex: 1 0 100%;
+    }
+
+    .mode-switch button {
+        flex: 1;
+    }
+
+    .recipe-header,
+    .recipe-row {
+        grid-template-columns:
+            minmax(105px, 1.3fr)
+            minmax(70px, .75fr)
+            minmax(70px, .7fr)
+            minmax(70px, .7fr);
+    }
+
+    .pack-header,
+    .pack-row {
+        grid-template-columns:
+            minmax(115px, 1.3fr)
+            minmax(70px, .7fr)
+            minmax(70px, .7fr)
+            minmax(70px, .7fr);
+    }
+
+    /*
+     * Bento collapses from 6 columns to 2.
+     * Hero stays full width, the mid pair sits
+     * side by side, the small tiles pair up and
+     * the odd one out spans the full row.
+     */
+
+    .bento {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 9px;
+    }
+
+    .span-6 { grid-column: span 2; }
+    .span-3 { grid-column: span 1; }
+    .span-2 { grid-column: span 1; }
+
+    .span-2.span-mob-full { grid-column: span 2; }
+
+    .tile-hero .kpi-value {
+        font-size: 29px;
+    }
+
+    .tile-mid .kpi-value {
+        font-size: 19px;
+    }
+
+    .panel-hint {
+        display: none;
+    }
+}
+
+@media (max-width: 380px) {
+
+    .grid {
+        grid-template-columns: 1fr;
+    }
+
+    .span-3 { grid-column: span 2; }
+
+    .panel-badge {
+        font-size: 10px;
+        padding: 4px 8px;
+    }
+
+    .sb-value {
+        font-size: 13.5px;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<!-- =========================================================
+     STICKY MINI BAR
+
+     Fixed to the top of the viewport. Stays hidden until the
+     money bento scrolls out of view, so profit is always
+     readable while editing recipe / packaging inputs.
+========================================================== -->
+
+<div
+    class="sticky-bar is-hidden"
+    id="stickyBar">
+
+    <div class="sticky-bar-inner">
+
+        <div class="sb-stat">
+
+            <div class="sb-label">
+                Profit / Bowl
+            </div>
+
+            <div
+                class="sb-value"
+                id="sbProfitBowl">
+
+                ₹0
+
+            </div>
+
+        </div>
+
+
+        <div class="sb-divider"></div>
+
+
+        <div class="sb-stat">
+
+            <div class="sb-label">
+                Net Profit
+            </div>
+
+            <div
+                class="sb-value green"
+                id="sbNetProfit">
+
+                ₹0
+
+            </div>
+
+        </div>
+
+
+        <div class="sb-divider"></div>
+
+
+        <div class="sb-stat">
+
+            <div class="sb-label">
+                Margin
+            </div>
+
+            <div
+                class="sb-value"
+                id="sbMargin">
+
+                0%
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<div class="app">
+
+    <!-- =====================================================
+         HEADER
+    ====================================================== -->
+
+    <div class="header">
+
+        <div class="brand">
+
+            <div class="brand-mark">
+                🍟
+            </div>
+
+            <div>
+
+                <div class="title">
+                    Snack Bowl Economics
+                </div>
+
+                <div class="subtitle">
+                    Cost • Sales • Profit • Inventory
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="mode-switch">
+
+            <button
+                type="button"
+                id="dailyBtn"
+                class="active">
+
+                Daily
+
+            </button>
+
+            <button
+                type="button"
+                id="monthlyBtn">
+
+                Monthly
+
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         MONEY BENTO
+
+         Results first. Everything below this block exists
+         only to change these numbers.
+    ====================================================== -->
+
+    <div
+        class="bento"
+        id="moneyBento">
+
+        <div class="tile tile-hero span-6">
+
+            <div class="kpi-label">
+                Net Profit
+                <span id="periodLabel">/ day</span>
+            </div>
+
+            <div
+                class="kpi-value green"
+                id="netProfit">
+
+                ₹0
+
+            </div>
+
+            <div class="kpi-sub">
+                Net margin
+                <strong id="margin">0%</strong>
+                on
+                <strong id="heroBowls">0 bowls</strong>
+            </div>
+
+        </div>
+
+
+        <div class="tile tile-mid span-3">
+
+            <div class="kpi-label">
+                Profit / Bowl
+            </div>
+
+            <div
+                class="kpi-value"
+                id="profitPerBowl">
+
+                ₹0
+
+            </div>
+
+        </div>
+
+
+        <div class="tile tile-mid span-3">
+
+            <div class="kpi-label">
+                True Cost / Bowl
+            </div>
+
+            <div
+                class="kpi-value"
+                id="costPerBowl">
+
+                ₹0
+
+            </div>
+
+        </div>
+
+
+        <div class="tile tile-sm span-2">
+
+            <div class="kpi-label">
+                Revenue
+            </div>
+
+            <div
+                class="kpi-value"
+                id="revenue">
+
+                ₹0
+
+            </div>
+
+        </div>
+
+
+        <div class="tile tile-sm span-2">
+
+            <div class="kpi-label">
+                Total Cost
+            </div>
+
+            <div
+                class="kpi-value"
+                id="totalCost">
+
+                ₹0
+
+            </div>
+
+        </div>
+
+
+        <div class="tile tile-sm span-2 span-mob-full">
+
+            <div class="kpi-label">
+                Break-even Bowls
+            </div>
+
+            <div
+                class="kpi-value yellow"
+                id="breakEven">
+
+                0
+
+            </div>
+
+            <div
+                class="kpi-sub"
+                id="breakEvenSub">
+
+                to recover ₹0
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         INPUT PANELS
+
+         Collapsed by default except Sales. Each summary
+         carries that section's per-bowl contribution, so
+         you can judge a section without opening it.
+    ====================================================== -->
+
+    <div class="section-title">
+        Your Assumptions
+    </div>
+
+
+    <details
+        class="panel"
+        open>
+
+        <summary>
+
+            <div class="panel-icon">
+                💰
+            </div>
+
+            <div class="panel-heading">
+
+                <div class="panel-name">
+                    Sales &amp; Price
+                </div>
+
+                <div class="panel-hint">
+                    Customers, selling price, fixed costs
+                </div>
+
+            </div>
+
+            <div
+                class="panel-badge"
+                id="salesBadge">
+
+                ₹0
+
+            </div>
+
+            <div class="panel-chevron">
+                ▼
+            </div>
+
+        </summary>
+
+
+        <div class="panel-body">
+
+            <div class="grid">
+
+                <div class="field">
+
+                    <label>
+                        Estimated customers / day
+                    </label>
+
+                    <input
+                        id="customers"
+                        type="number"
+                        min="0"
+                        value="100">
+
+                </div>
+
+
+                <div class="field">
+
+                    <label>
+                        Selling price / bowl ₹
+                    </label>
+
+                    <input
+                        id="sellingPrice"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value="170">
+
+                </div>
+
+
+                <div
+                    class="field"
+                    id="daysField"
+                    style="display:none">
+
+                    <label>
+                        Operating days / month
+                    </label>
+
+                    <input
+                        id="days"
+                        type="number"
+                        min="1"
+                        max="31"
+                        value="30">
+
+                </div>
+
+
+                <div class="field">
+
+                    <label>
+                        Fixed costs for period ₹
+                    </label>
+
+                    <input
+                        id="fixedCosts"
+                        type="number"
+                        min="0"
+                        step="1"
+                        value="0">
+
+                </div>
+
+
+                <div class="field">
+
+                    <label>
+                        My expected investment ₹
+                    </label>
+
+                    <input
+                        id="expectedInvestment"
+                        type="text"
+                        readonly
+                        tabindex="-1"
+                        value="₹0"
+                        aria-label="My expected investment for the period">
+
+                    <div class="field-note">
+                        Total cost for period —
+                        stock, packaging and running costs
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </details>
+
+
+    <!-- =====================================================
+         RECIPE
+    ====================================================== -->
+
+    <details class="panel">
+
+        <summary>
+
+            <div class="panel-icon">
+                🍗
+            </div>
+
+            <div class="panel-heading">
+
+                <div class="panel-name">
+                    Recipe
+                </div>
+
+                <div class="panel-hint">
+                    10 ingredients · rates and grams per bowl
+                </div>
+
+            </div>
+
+            <div
+                class="panel-badge"
+                id="recipeBadge">
+
+                ₹0
+
+            </div>
+
+            <div class="panel-chevron">
+                ▼
+            </div>
+
+        </summary>
+
+
+        <div class="panel-body">
+
+            <div class="section-description">
+
+                Working assumptions for a loaded chicken
+                + French fries bowl. These are NOT claimed to
+                be the proprietary WTF recipe.
+
+                Every quantity and price can be edited.
+
+            </div>
+
+
+            <div class="recipe-header">
+
+                <div>
+                    Ingredient
+                </div>
+
+                <div>
+                    ₹ / kg
+                </div>
+
+                <div>
+                    Qty / bowl
+                </div>
+
+                <div>
+                    Cost
+                </div>
+
+            </div>
+
+
+            <div id="recipeContainer"></div>
+
+        </div>
+
+    </details>
+
+
+    <!-- =====================================================
+         COOKING COST
+    ====================================================== -->
+
+    <details class="panel">
+
+        <summary>
+
+            <div class="panel-icon">
+                🔥
+            </div>
+
+            <div class="panel-heading">
+
+                <div class="panel-name">
+                    Cooking
+                </div>
+
+                <div class="panel-hint">
+                    Frying oil and commercial LPG
+                </div>
+
+            </div>
+
+            <div
+                class="panel-badge"
+                id="cookingBadge">
+
+                ₹0
+
+            </div>
+
+            <div class="panel-chevron">
+                ▼
+            </div>
+
+        </summary>
+
+
+        <div class="panel-body">
+
+            <div class="grid">
+
+                <div class="field">
+
+                    <label>
+                        Cooking oil ₹ / litre
+                    </label>
+
+                    <input
+                        id="oilRate"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value="145">
+
+                </div>
+
+
+                <div class="field">
+
+                    <label>
+                        Oil consumed / bowl ml
+                    </label>
+
+                    <input
+                        id="oilQty"
+                        type="number"
+                        min="0"
+                        step="0.1"
+                        value="8">
+
+                </div>
+
+
+                <div class="field">
+
+                    <label>
+                        Commercial LPG ₹ / 19kg
+                    </label>
+
+                    <input
+                        id="gasRate"
+                        type="number"
+                        min="0"
+                        step="1"
+                        value="2810">
+
+                </div>
+
+
+                <div class="field">
+
+                    <label>
+                        LPG consumed / bowl g
+                    </label>
+
+                    <input
+                        id="gasQty"
+                        type="number"
+                        min="0"
+                        step="0.1"
+                        value="8">
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </details>
+
+
+    <!-- =====================================================
+         BOWL & PACKAGING
+    ====================================================== -->
+
+    <details class="panel">
+
+        <summary>
+
+            <div class="panel-icon">
+                📦
+            </div>
+
+            <div class="panel-heading">
+
+                <div class="panel-name">
+                    Bowl &amp; Packaging
+                </div>
+
+                <div class="panel-hint">
+                    Box, bowl, plate, fork, tissue, cover
+                </div>
+
+            </div>
+
+            <div
+                class="panel-badge"
+                id="packBadge">
+
+                ₹0
+
+            </div>
+
+            <div class="panel-chevron">
+                ▼
+            </div>
+
+        </summary>
+
+
+        <div class="panel-body">
+
+            <div class="section-description">
+
+                Packaging is calculated from your actual
+                purchase prices. No ₹70 assumption is used.
+
+            </div>
+
+
+            <div class="pack-header">
+
+                <div>
+                    Item
+                </div>
+
+                <div>
+                    Purchase ₹
+                </div>
+
+                <div>
+                    Quantity
+                </div>
+
+                <div>
+                    ₹ / bowl
+                </div>
+
+            </div>
+
+
+            <div id="packagingContainer"></div>
+
+
+            <div class="breakdown-row total">
+
+                <strong>
+                    Packaging / Bowl
+                </strong>
+
+                <strong id="packagingPerBowl">
+                    ₹0
+                </strong>
+
+            </div>
+
+        </div>
+
+    </details>
+
+
+    <!-- =====================================================
+         OPERATING EXPENSES
+    ====================================================== -->
+
+    <details class="panel">
+
+        <summary>
+
+            <div class="panel-icon">
+                🧾
+            </div>
+
+            <div class="panel-heading">
+
+                <div class="panel-name">
+                    Operating Expenses
+                </div>
+
+                <div class="panel-hint">
+                    Monthly costs not tied to a single bowl
+                </div>
+
+            </div>
+
+            <div
+                class="panel-badge"
+                id="opexBadge">
+
+                ₹0
+
+            </div>
+
+            <div class="panel-chevron">
+                ▼
+            </div>
+
+        </summary>
+
+
+        <div class="panel-body">
+
+            <div class="grid">
+
+                <div class="field">
+
+                    <label>
+                        Dustbin covers / month ₹
+                    </label>
+
+                    <input
+                        id="dustbinMonthly"
+                        type="number"
+                        min="0"
+                        step="1"
+                        value="60">
+
+                </div>
+
+
+                <div class="field">
+
+                    <label>
+                        Other monthly expenses ₹
+                    </label>
+
+                    <input
+                        id="otherMonthly"
+                        type="number"
+                        min="0"
+                        step="1"
+                        value="0">
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </details>
+
+
+    <!-- =====================================================
+         COST BREAKDOWN
+    ====================================================== -->
+
+    <div class="section-title">
+        Where The Money Goes
+    </div>
+
+    <div class="card">
+
+        <div class="breakdown-row">
+
+            <span>
+                Chicken + Fries + Ingredients
+            </span>
+
+            <strong id="foodCost">
+                ₹0
+            </strong>
+
+        </div>
+
+
+        <div class="breakdown-row">
+
+            <span>
+                Cooking Oil
+            </span>
+
+            <strong id="oilCost">
+                ₹0
+            </strong>
+
+        </div>
+
+
+        <div class="breakdown-row">
+
+            <span>
+                LPG
+            </span>
+
+            <strong id="gasCost">
+                ₹0
+            </strong>
+
+        </div>
+
+
+        <div class="breakdown-row">
+
+            <span>
+                Bowl &amp; Packaging
+            </span>
+
+            <strong id="packCost">
+                ₹0
+            </strong>
+
+        </div>
+
+
+        <div class="breakdown-row">
+
+            <span>
+                Other Variable Cost
+            </span>
+
+            <strong id="otherVariableResult">
+                ₹0
+            </strong>
+
+        </div>
+
+
+        <div class="breakdown-row total">
+
+            <strong>
+                True cost / bowl
+            </strong>
+
+            <strong id="fullCost">
+                ₹0
+            </strong>
+
+        </div>
+
+
+        <div class="cost-bar">
+
+            <div
+                class="cost-bar-fill"
+                id="costBar">
+            </div>
+
+        </div>
+
+
+        <div
+            class="bar-label"
+            id="costBarLabel">
+
+            Cost as % of selling price
+
+        </div>
+
+
+        <div class="breakdown-row total">
+
+            <strong>
+                Contribution / bowl
+            </strong>
+
+            <strong
+                id="contribution"
+                class="green">
+
+                ₹0
+
+            </strong>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         INVENTORY
+    ====================================================== -->
+
+    <div class="section-title">
+        What You Need To Buy
+    </div>
+
+    <div class="card">
+
+        <div class="section-description">
+
+            Food and packaging quantities scale with your
+            estimated number of customers. Operating and
+            fixed costs are shown for the selected period,
+            so the total below matches Total Cost.
+
+        </div>
+
+
+        <div class="inventory-wrap">
+
+            <table class="inventory-table">
+
+                <thead>
+
+                    <tr>
+
+                        <th>
+                            Item
+                        </th>
+
+                        <th>
+                            Required
+                        </th>
+
+                        <th>
+                            Cost
+                        </th>
+
+                    </tr>
+
+                </thead>
+
+                <tbody id="inventoryBody">
+                </tbody>
+
+            </table>
+
+        </div>
+
+
+        <div class="breakdown-row">
+
+            <span>
+                Food + cooking inventory
+            </span>
+
+            <strong id="inventoryTotal">
+                ₹0
+            </strong>
+
+        </div>
+
+
+        <div class="breakdown-row">
+
+            <span>
+                Packaging inventory
+            </span>
+
+            <strong id="packagingInventoryTotal">
+                ₹0
+            </strong>
+
+        </div>
+
+
+        <div class="breakdown-row">
+
+            <span>
+                Operating + fixed costs
+            </span>
+
+            <strong id="operatingInventoryTotal">
+                ₹0
+            </strong>
+
+        </div>
+
+
+        <div class="breakdown-row total">
+
+            <strong>
+                Total cost for period
+            </strong>
+
+            <strong id="inventoryGrandTotal">
+                ₹0
+            </strong>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         BUSINESS SNAPSHOT
+    ====================================================== -->
+
+    <div class="section-title">
+        Business Snapshot
+    </div>
+
+    <div class="card">
+
+        <div class="breakdown-row">
+
+            <span>
+                Expected Bowls Sold
+            </span>
+
+            <strong id="snapshotBowls">
+                0
+            </strong>
+
+        </div>
+
+
+        <div class="breakdown-row">
+
+            <span>
+                Revenue
+            </span>
+
+            <strong id="snapshotRevenue">
+                ₹0
+            </strong>
+
+        </div>
+
+
+        <div class="breakdown-row">
+
+            <span>
+                Variable Cost
+            </span>
+
+            <strong id="snapshotVariable">
+                ₹0
+            </strong>
+
+        </div>
+
+
+        <div class="breakdown-row">
+
+            <span>
+                Fixed / Operating Cost
+            </span>
+
+            <strong id="snapshotFixed">
+                ₹0
+            </strong>
+
+        </div>
+
+
+        <div class="breakdown-row total">
+
+            <strong>
+                Net profit
+            </strong>
+
+            <strong
+                id="snapshotProfit"
+                class="green">
+
+                ₹0
+
+            </strong>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         NOTES
+
+         Reference material, collapsed. Not part of the
+         workflow, so it no longer sits between input steps.
+    ====================================================== -->
+
+    <div class="section-title">
+        Reference
+    </div>
+
+    <details class="panel">
+
+        <summary>
+
+            <div class="panel-icon">
+                📘
+            </div>
+
+            <div class="panel-heading">
+
+                <div class="panel-name">
+                    Costing Notes &amp; Assumptions
+                </div>
+
+                <div class="panel-hint">
+                    How each number was derived
+                </div>
+
+            </div>
+
+            <div class="panel-chevron">
+                ▼
+            </div>
+
+        </summary>
+
+
+        <div class="panel-body">
+
+            <div class="info-box">
+
+                <strong>Initial assumed portion:</strong>
+
+                100g chicken + 120g French fries,
+                with sauces, seasoning and coating.
+
+                <br><br>
+
+                The quantities you previously sent
+                (Marinade 12, Peri Peri 40, Mayo 24, etc.)
+                were used as <strong>purchased stock quantities</strong>,
+                because they reconcile with your ₹25,640 food-stock bill.
+
+            </div>
+
+
+            <div
+                class="info-box"
+                style="margin-top:10px">
+
+                <strong>Parcel covers:</strong>
+
+                Your purchase is ₹180 per 1 kg.
+                Since the number of covers in 1 kg is unknown,
+                enter the actual pieces/kg in the packaging section.
+
+                <br><br>
+
+                <strong>Dustbin covers:</strong>
+
+                These are treated as an operating expense,
+                NOT as packaging consumed by each customer.
+
+            </div>
+
+
+            <div
+                class="info-box"
+                style="margin-top:10px">
+
+                <strong>Packaging calculation:</strong>
+
+                Black parcel box + lid = ₹400 / 100 =
+                ₹4.00 each.
+
+                <br><br>
+
+                Brown bowl = ₹420 / 100 =
+                ₹4.20 each.
+
+                <br><br>
+
+                Plate = ₹110 / 100 =
+                ₹1.10 each.
+
+                <br><br>
+
+                Fork = ₹50 / 500 =
+                ₹0.10 each.
+
+                <br><br>
+
+                Tissue = ₹20 / 500 =
+                ₹0.04 each.
+
+                <br><br>
+
+                Parcel cover = ₹180 / 1kg.
+                Its per-piece cost depends on the actual
+                number of covers obtained from 1kg.
+
+                <br><br>
+
+                The calculator therefore does NOT assume a
+                parcel-cover price until you enter pieces/kg.
+
+                <br><br>
+
+                <strong>
+                    The ₹70 value previously mentioned is
+                    completely excluded from this calculator.
+                </strong>
+
+            </div>
+
+        </div>
+
+    </details>
+
+
+    <!-- =====================================================
+         RESET
+    ====================================================== -->
+
+    <div class="actions">
+
+        <button
+            type="button"
+            class="btn primary"
+            id="resetBtn">
+
+            Reset Assumptions
+
+        </button>
+
+    </div>
+
+</div>
+
+
+<script>
+
+/* ============================================================
+   SNACK BOWL COST & PROFIT CALCULATOR
+============================================================ */
+
+(() => {
+
+    /*
+     * =========================================================
+     * ASSUMED FOOD RECIPE
+     * =========================================================
+     *
+     * These are working assumptions for a loaded
+     * chicken + fries bowl.
+     *
+     * NOT claimed to be the official WTF recipe.
+     */
+
+    const ingredients = [
+
+        {
+            name: "Chicken",
+            rate: 220,
+            quantity: 100
+        },
+
+        {
+            name: "French Fries",
+            rate: 260,
+            quantity: 120
+        },
+
+        {
+            name: "Marinade Masala",
+            rate: 370,
+            quantity: 8
+        },
+
+        {
+            name: "Peri Peri",
+            rate: 140,
+            quantity: 5
+        },
+
+        {
+            name: "Mayo",
+            rate: 100,
+            quantity: 20
+        },
+
+        {
+            name: "Tandoori Sauce",
+            rate: 230,
+            quantity: 12
+        },
+
+        {
+            name: "Tangy Sauce",
+            rate: 190,
+            quantity: 12
+        },
+
+        {
+            name: "Breadcrumbs",
+            rate: 140,
+            quantity: 15
+        },
+
+        {
+            name: "Chilli Flakes",
+            rate: 220,
+            quantity: 1
+        },
+
+        {
+            name: "Oregano",
+            rate: 280,
+            quantity: 0.5
+        }
+
+    ];
+
+
+    /*
+     * =========================================================
+     * PACKAGING
+     * =========================================================
+     *
+     * All values are based on the purchase information
+     * supplied by the user.
+     */
+
+    const packaging = [
+
+        {
+            name: "Black Parcel Box + Lid",
+            purchasePrice: 400,
+            purchaseQty: 100,
+            unit: "pieces",
+            perPiece: true
+        },
+
+        {
+            name: "Brown Bowl",
+            purchasePrice: 420,
+            purchaseQty: 100,
+            unit: "pieces",
+            perPiece: true
+        },
+
+        {
+            name: "Plate",
+            purchasePrice: 110,
+            purchaseQty: 100,
+            unit: "pieces",
+            perPiece: true
+        },
+
+        {
+            name: "Fork",
+            purchasePrice: 50,
+            purchaseQty: 500,
+            unit: "pieces",
+            perPiece: true
+        },
+
+        {
+            name: "Tissue",
+            purchasePrice: 20,
+            purchaseQty: 500,
+            unit: "pieces",
+            perPiece: true
+        },
+
+        {
+            name: "Parcel Cover",
+            purchasePrice: 180,
+            purchaseQty: 200,
+            unit: "pieces/kg",
+            editableQty: true
+        }
+
+    ];
+
+
+    /*
+     * =========================================================
+     * STATE
+     * =========================================================
+     */
+
+    let mode = "daily";
+
+
+    /*
+     * =========================================================
+     * HELPERS
+     * =========================================================
+     */
+
+    const $ = selector =>
+        document.querySelector(selector);
+
+
+    const $$ = selector =>
+        [...document.querySelectorAll(selector)];
+
+
+    function numberValue(element) {
+
+        if (!element) {
+            return 0;
+        }
+
+        const value =
+            parseFloat(element.value);
+
+        if (
+            !Number.isFinite(value) ||
+            value < 0
+        ) {
+
+            return 0;
+
+        }
+
+        return value;
+
+    }
+
+
+    function money(value) {
+
+        if (
+            !Number.isFinite(value)
+        ) {
+
+            value = 0;
+
+        }
+
+        return "₹" +
+            value.toLocaleString(
+                "en-IN",
+                {
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 2
+                }
+            );
+
+    }
+
+
+    function quantity(value) {
+
+        if (
+            !Number.isFinite(value)
+        ) {
+
+            value = 0;
+
+        }
+
+        return value.toLocaleString(
+            "en-IN",
+            {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 2
+            }
+        );
+
+    }
+
+
+    /*
+     * =========================================================
+     * CREATE RECIPE
+     * =========================================================
+     */
+
+    const recipeContainer =
+        $("#recipeContainer");
+
+
+    ingredients.forEach(
+        (ingredient, index) => {
+
+            const row =
+                document.createElement("div");
+
+            row.className =
+                "recipe-row";
+
+
+            row.innerHTML = `
+
+                <div>
+
+                    <div class="ingredient-name">
+                        ${ingredient.name}
+                    </div>
+
+                    <div class="ingredient-unit">
+                        grams / bowl
+                    </div>
+
+                </div>
+
+
+                <div>
+
+                    <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        class="ingredient-rate"
+                        data-index="${index}"
+                        value="${ingredient.rate}"
+                        aria-label="${ingredient.name} price per kg">
+
+                </div>
+
+
+                <div>
+
+                    <input
+                        type="number"
+                        min="0"
+                        step="0.1"
+                        class="ingredient-quantity"
+                        data-index="${index}"
+                        value="${ingredient.quantity}"
+                        aria-label="${ingredient.name} quantity per bowl">
+
+                </div>
+
+
+                <div
+                    class="recipe-cost"
+                    id="recipeCost${index}">
+
+                    ₹0
+
+                </div>
+
+            `;
+
+
+            recipeContainer.appendChild(
+                row
+            );
+
+        }
+    );
+
+
+    /*
+     * =========================================================
+     * CREATE PACKAGING
+     * =========================================================
+     */
+
+    const packagingContainer =
+        $("#packagingContainer");
+
+
+    packaging.forEach(
+        (item, index) => {
+
+            const row =
+                document.createElement("div");
+
+            row.className =
+                "pack-row";
+
+
+            let quantityValue =
+                item.purchaseQty;
+
+
+            let label =
+                item.unit;
+
+
+            if (item.editableQty) {
+
+                label =
+                    "pieces / kg";
+
+            }
+
+
+            row.innerHTML = `
+
+                <div>
+
+                    <div class="pack-name">
+                        ${item.name}
+                    </div>
+
+                    <div class="pack-detail">
+                        ${label}
+                    </div>
+
+                </div>
+
+
+                <div>
+
+                    <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        class="pack-purchase-price"
+                        data-index="${index}"
+                        value="${item.purchasePrice}"
+                        aria-label="${item.name} purchase price">
+
+                </div>
+
+
+                <div>
+
+                    <input
+                        type="number"
+                        min="1"
+                        step="1"
+                        class="pack-purchase-qty"
+                        data-index="${index}"
+                        value="${quantityValue}"
+                        aria-label="${item.name} purchase quantity">
+
+                </div>
+
+
+                <div
+                    class="pack-cost"
+                    id="packCost${index}">
+
+                    ₹0
+
+                </div>
+
+            `;
+
+
+            packagingContainer.appendChild(
+                row
+            );
+
+        }
+    );
+
+
+    /*
+     * =========================================================
+     * CALCULATE
+     * =========================================================
+     */
+
+    function calculate() {
+
+        const customers =
+            Math.floor(
+                numberValue(
+                    $("#customers")
+                )
+            );
+
+
+        const sellingPrice =
+            numberValue(
+                $("#sellingPrice")
+            );
+
+
+        const days =
+            Math.max(
+                1,
+                Math.floor(
+                    numberValue(
+                        $("#days")
+                    )
+                ) || 30
+            );
+
+
+        const fixedCosts =
+            numberValue(
+                $("#fixedCosts")
+            );
+
+
+        const multiplier =
+            mode === "monthly"
+                ? days
+                : 1;
+
+
+        const totalBowls =
+            customers * multiplier;
+
+
+        /*
+         * =====================================================
+         * FOOD COST
+         * =====================================================
+         */
+
+        let foodCostPerBowl = 0;
+
+
+        const inventoryRows = [];
+
+
+        $$(".recipe-row")
+            .forEach(
+                (row, index) => {
+
+                    const rate =
+                        numberValue(
+                            row.querySelector(
+                                ".ingredient-rate"
+                            )
+                        );
+
+
+                    const qty =
+                        numberValue(
+                            row.querySelector(
+                                ".ingredient-quantity"
+                            )
+                        );
+
+
+                    /*
+                     * ₹/gram
+                     */
+
+                    const costPerGram =
+                        rate / 1000;
+
+
+                    const costPerBowl =
+                        costPerGram * qty;
+
+
+                    foodCostPerBowl +=
+                        costPerBowl;
+
+
+                    const totalRequired =
+                        qty * totalBowls;
+
+
+                    const totalCost =
+                        costPerBowl *
+                        totalBowls;
+
+
+                    row.querySelector(
+                        ".recipe-cost"
+                    ).textContent =
+                        money(
+                            costPerBowl
+                        );
+
+
+                    inventoryRows.push({
+
+                        name:
+                            ingredients[index].name,
+
+                        quantity:
+                            totalRequired,
+
+                        cost:
+                            totalCost
+
+                    });
+
+                }
+            );
+
+
+        /*
+         * =====================================================
+         * OIL
+         * =====================================================
+         */
+
+        const oilRate =
+            numberValue(
+                $("#oilRate")
+            );
+
+
+        const oilQty =
+            numberValue(
+                $("#oilQty")
+            );
+
+
+        const oilCostPerBowl =
+            (
+                oilRate / 1000
+            ) * oilQty;
+
+
+        /*
+         * =====================================================
+         * GAS
+         * =====================================================
+         */
+
+        const gasRate =
+            numberValue(
+                $("#gasRate")
+            );
+
+
+        const gasQty =
+            numberValue(
+                $("#gasQty")
+            );
+
+
+        const gasCostPerBowl =
+            (
+                gasRate / 19000
+            ) * gasQty;
+
+
+        /*
+         * =====================================================
+         * PACKAGING COST
+         * =====================================================
+         */
+
+        let packagingCostPerBowl = 0;
+
+
+        const packagingRows = [];
+
+
+        packaging.forEach(
+            (item, index) => {
+
+                const row =
+                    packagingContainer
+                        .children[index];
+
+
+                const purchasePrice =
+                    numberValue(
+                        row.querySelector(
+                            ".pack-purchase-price"
+                        )
+                    );
+
+
+                const purchaseQty =
+                    numberValue(
+                        row.querySelector(
+                            ".pack-purchase-qty"
+                        )
+                    );
+
+
+                let perPieceCost = 0;
+
+
+                if (
+                    purchaseQty > 0
+                ) {
+
+                    perPieceCost =
+                        purchasePrice /
+                        purchaseQty;
+
+                }
+
+
+                packagingCostPerBowl +=
+                    perPieceCost;
+
+
+                row.querySelector(
+                    ".pack-cost"
+                ).textContent =
+                    money(
+                        perPieceCost
+                    );
+
+
+                /*
+                 * One piece of each packaging item is
+                 * consumed per bowl.
+                 */
+
+                packagingRows.push({
+
+                    name:
+                        item.name,
+
+                    perPieceCost:
+                        perPieceCost
+
+                });
+
+            }
+        );
+
+
+        /*
+         * =====================================================
+         * OTHER OPERATING EXPENSES
+         * =====================================================
+         */
+
+        const dustbinMonthly =
+            numberValue(
+                $("#dustbinMonthly")
+            );
+
+
+        const otherMonthly =
+            numberValue(
+                $("#otherMonthly")
+            );
+
+
+        /*
+         * Monthly operating expenses
+         */
+
+        const monthlyOperating =
+            dustbinMonthly +
+            otherMonthly;
+
+
+        /*
+         * Convert operating expenses
+         * into selected period.
+         */
+
+        const operatingExpense =
+            mode === "monthly"
+                ? monthlyOperating
+                : monthlyOperating / days;
+
+
+        /*
+         * =====================================================
+         * VARIABLE COST / BOWL
+         * =====================================================
+         */
+
+        const otherVariable =
+            0;
+
+
+        const trueCostPerBowl =
+            foodCostPerBowl +
+            oilCostPerBowl +
+            gasCostPerBowl +
+            packagingCostPerBowl +
+            otherVariable;
+
+
+        /*
+         * =====================================================
+         * REVENUE
+         * =====================================================
+         */
+
+        const revenue =
+            sellingPrice *
+            totalBowls;
+
+
+        /*
+         * =====================================================
+         * VARIABLE COST
+         * =====================================================
+         */
+
+        const variableCost =
+            trueCostPerBowl *
+            totalBowls;
+
+
+        /*
+         * =====================================================
+         * TOTAL COST
+         * =====================================================
+         */
+
+        const totalCost =
+            variableCost +
+            fixedCosts +
+            operatingExpense;
+
+
+        /*
+         * =====================================================
+         * NET PROFIT
+         * =====================================================
+         */
+
+        const netProfit =
+            revenue -
+            totalCost;
+
+
+        /*
+         * =====================================================
+         * PROFIT / BOWL
+         * =====================================================
+         */
+
+        let profitPerBowl =
+            sellingPrice -
+            trueCostPerBowl;
+
+
+        if (
+            totalBowls > 0
+        ) {
+
+            profitPerBowl =
+                netProfit /
+                totalBowls;
+
+        }
+
+
+        /*
+         * =====================================================
+         * CONTRIBUTION
+         * =====================================================
+         */
+
+        const contributionPerBowl =
+            sellingPrice -
+            trueCostPerBowl;
+
+
+        /*
+         * =====================================================
+         * MARGIN
+         * =====================================================
+         */
+
+        const margin =
+            revenue > 0
+                ? (
+                    netProfit /
+                    revenue
+                ) * 100
+                : 0;
+
+
+        /*
+         * =====================================================
+         * BREAK EVEN
+         * =====================================================
+         *
+         * Cost recovery, not textbook CVP break-even.
+         *
+         * The stock for the whole period is bought up front,
+         * so the entire Total Cost is money already committed.
+         * The question being answered is therefore "how many
+         * bowls must I sell to earn that money back", which
+         * is total cost divided by selling price.
+         */
+
+        const totalFixedForPeriod =
+            fixedCosts +
+            operatingExpense;
+
+
+        let breakEven = 0;
+
+
+        if (
+            sellingPrice > 0
+        ) {
+
+            breakEven =
+                Math.ceil(
+                    totalCost /
+                    sellingPrice
+                );
+
+        }
+
+
+        /*
+         * =====================================================
+         * KPI OUTPUT
+         * =====================================================
+         */
+
+        $("#revenue").textContent =
+            money(revenue);
+
+
+        $("#totalCost").textContent =
+            money(totalCost);
+
+
+        $("#netProfit").textContent =
+            money(netProfit);
+
+
+        $("#profitPerBowl").textContent =
+            money(profitPerBowl);
+
+
+        $("#costPerBowl").textContent =
+            money(trueCostPerBowl);
+
+
+        $("#margin").textContent =
+            margin.toFixed(1) +
+            "%";
+
+
+        $("#breakEven").textContent =
+            breakEven.toLocaleString(
+                "en-IN"
+            );
+
+
+        /*
+         * Break-even is only reachable if it lands within
+         * the bowls actually planned for the period.
+         */
+
+        const breakEvenReached =
+            totalBowls > 0 &&
+            breakEven <= totalBowls;
+
+
+        $("#breakEvenSub").textContent =
+            "to recover " +
+            money(totalCost) +
+            (
+                breakEvenReached
+                    ? " · " +
+                      (
+                          totalBowls -
+                          breakEven
+                      ).toLocaleString("en-IN") +
+                      " bowls into profit"
+                    : " · not covered this period"
+            );
+
+
+        const breakEvenElement =
+            $("#breakEven");
+
+
+        breakEvenElement.classList.remove(
+            "yellow",
+            "green",
+            "red"
+        );
+
+
+        breakEvenElement.classList.add(
+            breakEvenReached
+                ? "yellow"
+                : "red"
+        );
+
+
+        $("#contribution").textContent =
+            money(
+                contributionPerBowl
+            );
+
+
+        /*
+         * =====================================================
+         * STICKY MINI BAR
+         * =====================================================
+         */
+
+        $("#sbProfitBowl").textContent =
+            money(profitPerBowl);
+
+
+        $("#sbNetProfit").textContent =
+            money(netProfit);
+
+
+        $("#sbMargin").textContent =
+            margin.toFixed(1) + "%";
+
+
+        /*
+         * =====================================================
+         * PERIOD + HERO SUBLINE
+         * =====================================================
+         */
+
+        $("#periodLabel").textContent =
+            mode === "monthly"
+                ? "/ month"
+                : "/ day";
+
+
+        $("#heroBowls").textContent =
+            totalBowls.toLocaleString("en-IN") +
+            " bowls";
+
+
+        /*
+         * =====================================================
+         * PANEL SUMMARY BADGES
+         * =====================================================
+         *
+         * Each collapsed section shows what it contributes,
+         * so it can be judged without opening it.
+         */
+
+        $("#salesBadge").textContent =
+            money(sellingPrice) +
+            " × " +
+            totalBowls.toLocaleString("en-IN");
+
+
+        $("#recipeBadge").textContent =
+            money(foodCostPerBowl) + " / bowl";
+
+
+        $("#cookingBadge").textContent =
+            money(
+                oilCostPerBowl +
+                gasCostPerBowl
+            ) + " / bowl";
+
+
+        $("#packBadge").textContent =
+            money(packagingCostPerBowl) + " / bowl";
+
+
+        $("#opexBadge").textContent =
+            money(operatingExpense) +
+            (
+                mode === "monthly"
+                    ? " / month"
+                    : " / day"
+            );
+
+
+        /*
+         * =====================================================
+         * PROFIT COLOR
+         * =====================================================
+         */
+
+        const profitElements = [
+
+            $("#netProfit"),
+
+            $("#profitPerBowl"),
+
+            $("#snapshotProfit"),
+
+            $("#sbNetProfit")
+
+        ];
+
+
+        profitElements.forEach(
+            element => {
+
+                element.classList.remove(
+                    "green",
+                    "red"
+                );
+
+
+                if (
+                    netProfit >= 0
+                ) {
+
+                    element.classList.add(
+                        "green"
+                    );
+
+                } else {
+
+                    element.classList.add(
+                        "red"
+                    );
+
+                }
+
+            }
+        );
+
+
+        /*
+         * Contribution is coloured on its own sign, not on
+         * net profit: a bowl can contribute while the day
+         * still loses money on fixed costs.
+         */
+
+        const contributionElement =
+            $("#contribution");
+
+
+        contributionElement.classList.remove(
+            "green",
+            "red"
+        );
+
+
+        contributionElement.classList.add(
+            contributionPerBowl >= 0
+                ? "green"
+                : "red"
+        );
+
+
+        /*
+         * =====================================================
+         * COST BREAKDOWN
+         * =====================================================
+         */
+
+        $("#foodCost").textContent =
+            money(
+                foodCostPerBowl
+            );
+
+
+        $("#oilCost").textContent =
+            money(
+                oilCostPerBowl
+            );
+
+
+        $("#gasCost").textContent =
+            money(
+                gasCostPerBowl
+            );
+
+
+        $("#packCost").textContent =
+            money(
+                packagingCostPerBowl
+            );
+
+
+        $("#otherVariableResult").textContent =
+            money(
+                otherVariable
+            );
+
+
+        $("#fullCost").textContent =
+            money(
+                trueCostPerBowl
+            );
+
+
+        $("#packagingPerBowl").textContent =
+            money(
+                packagingCostPerBowl
+            );
+
+
+        /*
+         * =====================================================
+         * COST BAR
+         * =====================================================
+         */
+
+        const costPercentage =
+            sellingPrice > 0
+                ? (
+                    trueCostPerBowl /
+                    sellingPrice
+                ) * 100
+                : 0;
+
+
+        $("#costBar").style.width =
+            Math.min(
+                100,
+                Math.max(
+                    0,
+                    costPercentage
+                )
+            ) + "%";
+
+
+        $("#costBarLabel").textContent =
+            "Food + cooking + packaging cost is " +
+            costPercentage.toFixed(1) +
+            "% of selling price";
+
+        /*
+         * =====================================================
+         * INVENTORY TABLE
+         * =====================================================
+         *
+         * Two groups: what the food supplier delivers and
+         * what the packaging supplier delivers. Together
+         * they equal the variable cost for the period.
+         */
+
+        const inventoryBody =
+            $("#inventoryBody");
+
+
+        inventoryBody.innerHTML = "";
+
+
+        function addInventoryRow(
+            name,
+            required,
+            cost
+        ) {
+
+            const tr =
+                document.createElement("tr");
+
+
+            tr.innerHTML = `
+
+                <td>
+                    ${name}
+                </td>
+
+                <td>
+                    ${required}
+                </td>
+
+                <td>
+                    ${money(cost)}
+                </td>
+
+            `;
+
+
+            inventoryBody.appendChild(tr);
+
+        }
+
+
+        function addInventoryGroup(label) {
+
+            const tr =
+                document.createElement("tr");
+
+
+            tr.className =
+                "inv-group";
+
+
+            tr.innerHTML = `
+                <td colspan="3">${label}</td>
+            `;
+
+
+            inventoryBody.appendChild(tr);
+
+        }
+
+
+        /*
+         * FOOD + COOKING
+         */
+
+        addInventoryGroup(
+            "Food &amp; Cooking"
+        );
+
+
+        inventoryRows.forEach(
+            row => {
+
+                addInventoryRow(
+                    row.name,
+                    quantity(row.quantity) + " g",
+                    row.cost
+                );
+
+            }
+        );
+
+
+        addInventoryRow(
+            "Cooking Oil",
+            quantity(oilQty * totalBowls) + " ml",
+            oilCostPerBowl * totalBowls
+        );
+
+
+        addInventoryRow(
+            "LPG",
+            quantity(gasQty * totalBowls) + " g",
+            gasCostPerBowl * totalBowls
+        );
+
+
+        /*
+         * PACKAGING
+         *
+         * One piece of each item is consumed per bowl.
+         */
+
+        addInventoryGroup(
+            "Packaging"
+        );
+
+
+        packagingRows.forEach(
+            item => {
+
+                addInventoryRow(
+                    item.name,
+                    quantity(totalBowls) + " pcs",
+                    item.perPieceCost * totalBowls
+                );
+
+            }
+        );
+
+
+        /*
+         * OPERATING & FIXED
+         *
+         * Not consumed per bowl, but still spent over the
+         * period. Dustbin covers and other expenses are
+         * entered monthly, so they are divided down when
+         * the daily view is active. Fixed costs are already
+         * entered for the selected period.
+         */
+
+        const periodDivisor =
+            mode === "monthly"
+                ? 1
+                : days;
+
+
+        const periodLabelText =
+            mode === "monthly"
+                ? "per month"
+                : "per day";
+
+
+        addInventoryGroup(
+            "Operating &amp; Fixed"
+        );
+
+
+        addInventoryRow(
+            "Dustbin Covers",
+            periodLabelText,
+            dustbinMonthly / periodDivisor
+        );
+
+
+        addInventoryRow(
+            "Other Expenses",
+            periodLabelText,
+            otherMonthly / periodDivisor
+        );
+
+
+        addInventoryRow(
+            "Fixed Costs",
+            periodLabelText,
+            fixedCosts
+        );
+
+
+        /*
+         * =====================================================
+         * INVENTORY TOTALS
+         * =====================================================
+         */
+
+        const foodInventoryCost =
+            foodCostPerBowl *
+            totalBowls;
+
+
+        const oilInventoryCost =
+            oilCostPerBowl *
+            totalBowls;
+
+
+        const gasInventoryCost =
+            gasCostPerBowl *
+            totalBowls;
+
+
+        const cookingInventoryCost =
+            foodInventoryCost +
+            oilInventoryCost +
+            gasInventoryCost;
+
+
+        const packagingInventoryCost =
+            packagingCostPerBowl *
+            totalBowls;
+
+
+        $("#inventoryTotal").textContent =
+            money(
+                cookingInventoryCost
+            );
+
+
+        $("#packagingInventoryTotal").textContent =
+            money(
+                packagingInventoryCost
+            );
+
+
+        /*
+         * Operating + fixed for the period. Matches the
+         * Total Cost tile once added to the two inventory
+         * subtotals above.
+         */
+
+        $("#operatingInventoryTotal").textContent =
+            money(
+                totalFixedForPeriod
+            );
+
+
+        $("#inventoryGrandTotal").textContent =
+            money(
+                cookingInventoryCost +
+                packagingInventoryCost +
+                totalFixedForPeriod
+            );
+
+
+        /*
+         * Mirrored into the read-only investment field in
+         * Sales & Price. Assigning .value does not fire an
+         * input event, so this cannot re-enter calculate().
+         */
+
+        $("#expectedInvestment").value =
+            money(totalCost);
+
+
+        /*
+         * =====================================================
+         * SNAPSHOT
+         * =====================================================
+         */
+
+        $("#snapshotBowls").textContent =
+            totalBowls.toLocaleString(
+                "en-IN"
+            ) +
+            " bowls";
+
+
+        $("#snapshotRevenue").textContent =
+            money(
+                revenue
+            );
+
+
+        $("#snapshotVariable").textContent =
+            money(
+                variableCost
+            );
+
+
+        $("#snapshotFixed").textContent =
+            money(
+                totalFixedForPeriod
+            );
+
+
+        $("#snapshotProfit").textContent =
+            money(
+                netProfit
+            );
+
+    }
+
+
+    /*
+     * =========================================================
+     * MODE
+     * =========================================================
+     */
+
+    function setMode(newMode) {
+
+        mode =
+            newMode;
+
+
+        $("#dailyBtn")
+            .classList.toggle(
+                "active",
+                mode === "daily"
+            );
+
+
+        $("#monthlyBtn")
+            .classList.toggle(
+                "active",
+                mode === "monthly"
+            );
+
+
+        $("#daysField").style.display =
+            mode === "monthly"
+                ? "block"
+                : "none";
+
+
+        calculate();
+
+    }
+
+
+    $("#dailyBtn")
+        .addEventListener(
+            "click",
+            () => setMode("daily")
+        );
+
+
+    $("#monthlyBtn")
+        .addEventListener(
+            "click",
+            () => setMode("monthly")
+        );
+
+
+    /*
+     * =========================================================
+     * LIVE UPDATE
+     * =========================================================
+     */
+
+    document.addEventListener(
+        "input",
+        event => {
+
+            if (
+                event.target.matches(
+                    "input"
+                )
+            ) {
+
+                calculate();
+
+            }
+
+        }
+    );
+
+
+    /*
+     * =========================================================
+     * RESET
+     * =========================================================
+     */
+
+    $("#resetBtn")
+        .addEventListener(
+            "click",
+            () => {
+
+                /*
+                 * Sales
+                 */
+
+                $("#customers").value =
+                    100;
+
+
+                $("#sellingPrice").value =
+                    170;
+
+
+                $("#days").value =
+                    30;
+
+
+                $("#fixedCosts").value =
+                    0;
+
+
+                /*
+                 * Cooking
+                 */
+
+                $("#oilRate").value =
+                    145;
+
+
+                $("#oilQty").value =
+                    8;
+
+
+                $("#gasRate").value =
+                    2810;
+
+
+                $("#gasQty").value =
+                    8;
+
+
+                /*
+                 * Operating
+                 */
+
+                $("#dustbinMonthly").value =
+                    60;
+
+
+                $("#otherMonthly").value =
+                    0;
+
+
+                /*
+                 * Recipe
+                 */
+
+                $$(".ingredient-rate")
+                    .forEach(
+                        (input, index) => {
+
+                            input.value =
+                                ingredients[
+                                    index
+                                ].rate;
+
+                        }
+                    );
+
+
+                $$(".ingredient-quantity")
+                    .forEach(
+                        (input, index) => {
+
+                            input.value =
+                                ingredients[
+                                    index
+                                ].quantity;
+
+                        }
+                    );
+
+
+                /*
+                 * Packaging
+                 */
+
+                $$(".pack-purchase-price")
+                    .forEach(
+                        (input, index) => {
+
+                            input.value =
+                                packaging[
+                                    index
+                                ].purchasePrice;
+
+                        }
+                    );
+
+
+                $$(".pack-purchase-qty")
+                    .forEach(
+                        (input, index) => {
+
+                            input.value =
+                                packaging[
+                                    index
+                                ].purchaseQty;
+
+                        }
+                    );
+
+
+                setMode("daily");
+
+            }
+        );
+
+
+    /*
+     * =========================================================
+     * STICKY BAR VISIBILITY
+     * =========================================================
+     *
+     * The bar is only useful once the money bento has
+     * scrolled away, so it is revealed at that point.
+     */
+
+    const moneyBento =
+        $("#moneyBento");
+
+
+    if (window.IntersectionObserver) {
+
+        new IntersectionObserver(
+            ([entry]) => {
+
+                $("#stickyBar")
+                    .classList.toggle(
+                        "is-hidden",
+                        entry.isIntersecting
+                    );
+
+            },
+            {
+                threshold: 0
+            }
+        ).observe(moneyBento);
+
+    }
+
+
+    /*
+     * =========================================================
+     * INITIALIZE
+     * =========================================================
+     */
+
+    calculate();
+
+})();
+
+</script>
+
+</body>
+</html>
