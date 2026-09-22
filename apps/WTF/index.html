@@ -4,7 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport"
       content="width=device-width, initial-scale=1.0,
-               maximum-scale=1.0, user-scalable=no">
+               maximum-scale=1.0, user-scalable=no,
+               viewport-fit=cover">
+<meta name="theme-color" content="#09090b">
 
 <title>Snack Bowl Cost & Profit Calculator</title>
 
@@ -24,6 +26,17 @@
     --red: #ff5c5c;
     --red-soft: rgba(255,92,92,.12);
     --yellow: #ffc857;
+
+    /* Spending categories */
+    --c-food: #ff8a00;
+    --c-oil: #ffc857;
+    --c-gas: #5aa9ff;
+    --c-pack: #b18cff;
+    --c-rent: #ff6fa8;
+    --c-salary: #3fd0c9;
+    --c-fixed: #8a8a93;
+
+    --nav-h: 66px;
 }
 
 * {
@@ -63,7 +76,9 @@ button {
     width: 100%;
     max-width: 920px;
     margin: auto;
-    padding: 16px 12px 50px;
+    padding:
+        16px 12px
+        calc(var(--nav-h) + 40px + env(safe-area-inset-bottom));
 }
 
 /* =========================================================
@@ -752,13 +767,355 @@ button {
 }
 
 /* =========================================================
+   VIEWS (TABS)
+========================================================= */
+
+.view {
+    display: none;
+}
+
+.view.is-active {
+    display: block;
+    animation: viewIn .22s ease;
+}
+
+@keyframes viewIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: none; }
+}
+
+.view-head {
+    margin: 6px 2px 14px;
+}
+
+.view-title {
+    font-size: 20px;
+    font-weight: 850;
+    letter-spacing: -.4px;
+}
+
+.view-sub {
+    color: var(--muted);
+    font-size: 12px;
+    margin-top: 3px;
+    line-height: 1.45;
+}
+
+/* =========================================================
+   MONEY IN / OUT STATEMENT
+========================================================= */
+
+.statement {
+    padding: 16px;
+}
+
+.statement-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.period-chip {
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: var(--card2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 750;
+}
+
+.flow {
+    display: grid;
+    grid-template-columns: 40px minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: 12px;
+    row-gap: 8px;
+    padding: 4px 0 12px;
+}
+
+.flow + .flow {
+    padding-top: 10px;
+}
+
+.flow-icon {
+    width: 40px;
+    height: 40px;
+    display: grid;
+    place-items: center;
+    border-radius: 13px;
+}
+
+.flow-icon svg {
+    width: 20px;
+    height: 20px;
+}
+
+.flow-icon.in {
+    color: var(--green);
+    background: var(--green-soft);
+}
+
+.flow-icon.out {
+    color: var(--red);
+    background: var(--red-soft);
+}
+
+.flow-name {
+    font-size: 14px;
+    font-weight: 800;
+}
+
+.flow-hint {
+    color: var(--muted);
+    font-size: 11px;
+    margin-top: 2px;
+}
+
+.flow-amount {
+    font-size: 21px;
+    font-weight: 850;
+    letter-spacing: -.4px;
+    text-align: right;
+    white-space: nowrap;
+}
+
+.flow-bar {
+    grid-column: 1 / -1;
+    height: 8px;
+    border-radius: 99px;
+    background: #0e0e10;
+    overflow: hidden;
+}
+
+.flow-bar-fill {
+    height: 100%;
+    width: 0%;
+    border-radius: 99px;
+    transition: width .3s ease;
+}
+
+.flow-bar-fill.in  { background: var(--green); }
+.flow-bar-fill.out { background: var(--red); }
+
+.keep {
+    margin-top: 6px;
+    padding-top: 14px;
+    border-top: 1px dashed var(--border);
+}
+
+.keep .kpi-value {
+    font-size: 34px;
+    letter-spacing: -1px;
+    margin-top: 4px;
+}
+
+.keep-math {
+    margin-top: 6px;
+    color: var(--muted);
+    font-size: 11.5px;
+}
+
+/* =========================================================
+   SPENDING SPLIT
+========================================================= */
+
+.split-bar {
+    display: flex;
+    gap: 3px;
+    height: 14px;
+    border-radius: 99px;
+    overflow: hidden;
+    background: #0e0e10;
+}
+
+.split-seg {
+    height: 100%;
+    min-width: 3px;
+    transition: flex-grow .3s ease;
+}
+
+.split-legend {
+    margin-top: 12px;
+}
+
+.split-row {
+    display: grid;
+    grid-template-columns: 12px minmax(0, 1fr) auto 48px;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+}
+
+.split-row:last-child {
+    border-bottom: 0;
+}
+
+.split-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+}
+
+.split-pct {
+    color: var(--muted);
+    font-size: 11.5px;
+    text-align: right;
+}
+
+.split-row strong {
+    white-space: nowrap;
+}
+
+.split-mini {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+    margin-top: 10px;
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.split-mini span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.card-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.card-title {
+    font-size: 14px;
+    font-weight: 800;
+}
+
+.link-btn {
+    border: 0;
+    background: none;
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 750;
+    padding: 6px 0;
+}
+
+/* =========================================================
+   BUY TOTAL
+========================================================= */
+
+.buy-total {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.buy-total .kpi-value {
+    font-size: 26px;
+    color: var(--red);
+}
+
+/* =========================================================
+   BOTTOM NAV
+========================================================= */
+
+.bottom-nav {
+    position: fixed;
+    left: 50%;
+    bottom: calc(12px + env(safe-area-inset-bottom));
+    transform: translateX(-50%);
+    z-index: 40;
+    width: min(480px, calc(100% - 20px));
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 4px;
+    padding: 6px;
+    background: rgba(23,23,25,.84);
+    backdrop-filter: blur(18px) saturate(1.4);
+    -webkit-backdrop-filter: blur(18px) saturate(1.4);
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 24px;
+    box-shadow:
+        0 12px 32px rgba(0,0,0,.5),
+        inset 0 1px 0 rgba(255,255,255,.04);
+}
+
+.nav-btn {
+    min-height: calc(var(--nav-h) - 12px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    border: 0;
+    border-radius: 18px;
+    background: transparent;
+    color: var(--muted);
+    font-size: 10.5px;
+    font-weight: 750;
+    letter-spacing: .1px;
+    transition: color .18s ease, background .18s ease;
+}
+
+.nav-btn svg {
+    width: 22px;
+    height: 22px;
+    transition: transform .2s ease;
+}
+
+.nav-btn:hover {
+    color: var(--text);
+}
+
+.nav-btn.active {
+    color: var(--accent);
+    background: var(--accent-soft);
+}
+
+.nav-btn.active svg {
+    transform: translateY(-1px) scale(1.08);
+}
+
+.nav-btn:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .view.is-active { animation: none; }
+    .nav-btn svg,
+    .flow-bar-fill,
+    .split-seg { transition: none; }
+}
+
+/* =========================================================
    MOBILE
 ========================================================= */
 
 @media (max-width: 560px) {
 
     .app {
-        padding: 13px 9px 40px;
+        padding:
+            13px 9px
+            calc(var(--nav-h) + 34px + env(safe-area-inset-bottom));
+    }
+
+    .keep .kpi-value {
+        font-size: 30px;
+    }
+
+    .flow-amount {
+        font-size: 19px;
     }
 
     .title {
@@ -876,12 +1233,12 @@ button {
         <div class="sb-stat">
 
             <div class="sb-label">
-                Profit / Bowl
+                Money In
             </div>
 
             <div
-                class="sb-value"
-                id="sbProfitBowl">
+                class="sb-value green"
+                id="sbIn">
 
                 ₹0
 
@@ -896,7 +1253,27 @@ button {
         <div class="sb-stat">
 
             <div class="sb-label">
-                Net Profit
+                Money Out
+            </div>
+
+            <div
+                class="sb-value red"
+                id="sbOut">
+
+                ₹0
+
+            </div>
+
+        </div>
+
+
+        <div class="sb-divider"></div>
+
+
+        <div class="sb-stat">
+
+            <div class="sb-label">
+                You Keep
             </div>
 
             <div
@@ -904,26 +1281,6 @@ button {
                 id="sbNetProfit">
 
                 ₹0
-
-            </div>
-
-        </div>
-
-
-        <div class="sb-divider"></div>
-
-
-        <div class="sb-stat">
-
-            <div class="sb-label">
-                Margin
-            </div>
-
-            <div
-                class="sb-value"
-                id="sbMargin">
-
-                0%
 
             </div>
 
@@ -994,30 +1351,116 @@ button {
          only to change these numbers.
     ====================================================== -->
 
+    <section
+        class="view is-active"
+        data-view="home">
+
     <div
         class="bento"
         id="moneyBento">
 
-        <div class="tile tile-hero span-6">
+        <!--
+            Statement card: money in, money out, and what is
+            left. Reads top to bottom like a bank statement.
+        -->
 
-            <div class="kpi-label">
-                Net Profit
-                <span id="periodLabel">/ day</span>
+        <div class="tile tile-hero statement span-6">
+
+            <div class="statement-top">
+
+                <div class="card-title">
+                    Your money
+                </div>
+
+                <div
+                    class="period-chip"
+                    id="periodChip">
+
+                    Per day · 0 bowls
+
+                </div>
+
             </div>
 
-            <div
-                class="kpi-value green"
-                id="netProfit">
 
-                ₹0
+            <div class="flow">
+
+                <div class="flow-icon in">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+                </div>
+
+                <div>
+                    <div class="flow-name">Money In</div>
+                    <div class="flow-hint">Income from bowl sales</div>
+                </div>
+
+                <div
+                    class="flow-amount green"
+                    id="revenue">
+
+                    ₹0
+
+                </div>
+
+                <div class="flow-bar">
+                    <div class="flow-bar-fill in" id="inBar"></div>
+                </div>
 
             </div>
 
-            <div class="kpi-sub">
-                Net margin
-                <strong id="margin">0%</strong>
-                on
-                <strong id="heroBowls">0 bowls</strong>
+
+            <div class="flow">
+
+                <div class="flow-icon out">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+                </div>
+
+                <div>
+                    <div class="flow-name">Money Out</div>
+                    <div class="flow-hint">Food, cooking, packaging, running costs</div>
+                </div>
+
+                <div
+                    class="flow-amount red"
+                    id="totalCost">
+
+                    ₹0
+
+                </div>
+
+                <div class="flow-bar">
+                    <div class="flow-bar-fill out" id="outBar"></div>
+                </div>
+
+            </div>
+
+
+            <div class="keep">
+
+                <div class="kpi-label">
+                    You keep
+                    <span id="periodLabel">/ day</span>
+                </div>
+
+                <div
+                    class="kpi-value green"
+                    id="netProfit">
+
+                    ₹0
+
+                </div>
+
+                <div class="keep-math" id="keepMath">
+                    ₹0 in − ₹0 out
+                </div>
+
+                <div class="kpi-sub">
+                    Net margin
+                    <strong id="margin">0%</strong>
+                    on
+                    <strong id="heroBowls">0 bowls</strong>
+                </div>
+
             </div>
 
         </div>
@@ -1057,41 +1500,7 @@ button {
         </div>
 
 
-        <div class="tile tile-sm span-2">
-
-            <div class="kpi-label">
-                Revenue
-            </div>
-
-            <div
-                class="kpi-value"
-                id="revenue">
-
-                ₹0
-
-            </div>
-
-        </div>
-
-
-        <div class="tile tile-sm span-2">
-
-            <div class="kpi-label">
-                Total Cost
-            </div>
-
-            <div
-                class="kpi-value"
-                id="totalCost">
-
-                ₹0
-
-            </div>
-
-        </div>
-
-
-        <div class="tile tile-sm span-2 span-mob-full">
+        <div class="tile span-6">
 
             <div class="kpi-label">
                 Break-even Bowls
@@ -1118,16 +1527,72 @@ button {
     </div>
 
 
+    <div class="section-title">
+        Where Money Out Goes
+    </div>
+
+    <div class="card">
+
+        <div
+            class="split-bar"
+            id="splitBarHome">
+        </div>
+
+        <div
+            class="split-mini"
+            id="splitMiniHome">
+        </div>
+
+        <div class="actions" style="margin-top:10px">
+
+            <button
+                type="button"
+                class="link-btn"
+                data-target="spending">
+
+                See full breakdown →
+
+            </button>
+
+            <button
+                type="button"
+                class="link-btn"
+                data-target="buy">
+
+                Shopping list →
+
+            </button>
+
+        </div>
+
+    </div>
+
+    </section>
+
+
     <!-- =====================================================
-         INPUT PANELS
+         SETUP VIEW — INPUT PANELS
 
          Collapsed by default except Sales. Each summary
          carries that section's per-bowl contribution, so
          you can judge a section without opening it.
     ====================================================== -->
 
-    <div class="section-title">
-        Your Assumptions
+    <section
+        class="view"
+        data-view="setup">
+
+    <div class="view-head">
+
+        <div class="view-title">
+            Setup
+        </div>
+
+        <div class="view-sub">
+            Your prices, recipe and quantities.
+            Every number updates live.
+        </div>
+
     </div>
 
 
@@ -1595,6 +2060,38 @@ button {
                 <div class="field">
 
                     <label>
+                        Vehicle rent / month ₹
+                    </label>
+
+                    <input
+                        id="vehicleMonthly"
+                        type="number"
+                        min="0"
+                        step="1"
+                        value="15000">
+
+                </div>
+
+
+                <div class="field">
+
+                    <label>
+                        Worker salary / month ₹
+                    </label>
+
+                    <input
+                        id="salaryMonthly"
+                        type="number"
+                        min="0"
+                        step="1"
+                        value="7000">
+
+                </div>
+
+
+                <div class="field">
+
+                    <label>
                         Dustbin covers / month ₹
                     </label>
 
@@ -1630,12 +2127,67 @@ button {
     </details>
 
 
+    </section>
+
+
     <!-- =====================================================
-         COST BREAKDOWN
+         SPENDING VIEW — WHERE THE MONEY GOES
     ====================================================== -->
 
+    <section
+        class="view"
+        data-view="spending">
+
+    <div class="view-head">
+
+        <div class="view-title">
+            Where Money Goes
+        </div>
+
+        <div
+            class="view-sub"
+            id="spendSub">
+
+            Every rupee you spend, split by category
+
+        </div>
+
+    </div>
+
+
+    <div class="card">
+
+        <div class="card-head">
+
+            <div class="card-title">
+                Total spend
+            </div>
+
+            <div
+                class="flow-amount red"
+                id="spendTotal">
+
+                ₹0
+
+            </div>
+
+        </div>
+
+        <div
+            class="split-bar"
+            id="splitBarFull">
+        </div>
+
+        <div
+            class="split-legend"
+            id="splitLegend">
+        </div>
+
+    </div>
+
+
     <div class="section-title">
-        Where The Money Goes
+        Cost Of One Bowl
     </div>
 
     <div class="card">
@@ -1756,15 +2308,63 @@ button {
     </div>
 
 
+    </section>
+
+
     <!-- =====================================================
-         INVENTORY
+         BUY VIEW — INVENTORY
     ====================================================== -->
 
-    <div class="section-title">
-        What You Need To Buy
+    <section
+        class="view"
+        data-view="buy">
+
+    <div class="view-head">
+
+        <div class="view-title">
+            What You Need To Buy
+        </div>
+
+        <div
+            class="view-sub"
+            id="buySub">
+
+            Shopping list for the selected period
+
+        </div>
+
     </div>
 
+
     <div class="card">
+
+        <div class="buy-total">
+
+            <div>
+
+                <div class="kpi-label">
+                    Total to spend
+                </div>
+
+                <div
+                    class="kpi-value"
+                    id="buyTotalTop">
+
+                    ₹0
+
+                </div>
+
+            </div>
+
+            <div
+                class="period-chip"
+                id="buyChip">
+
+                0 bowls
+
+            </div>
+
+        </div>
 
         <div class="section-description">
 
@@ -1862,9 +2462,16 @@ button {
     </div>
 
 
+    </section>
+
+
     <!-- =====================================================
-         BUSINESS SNAPSHOT
+         BUSINESS SNAPSHOT (Spending view, continued)
     ====================================================== -->
+
+    <section
+        class="view"
+        data-view="spending">
 
     <div class="section-title">
         Business Snapshot
@@ -1943,12 +2550,19 @@ button {
     </div>
 
 
+    </section>
+
+
     <!-- =====================================================
-         NOTES
+         NOTES (Setup view, continued)
 
          Reference material, collapsed. Not part of the
          workflow, so it no longer sits between input steps.
     ====================================================== -->
+
+    <section
+        class="view"
+        data-view="setup">
 
     <div class="section-title">
         Reference
@@ -2091,7 +2705,64 @@ button {
 
     </div>
 
+    </section>
+
 </div>
+
+
+<!-- =========================================================
+     BOTTOM NAV
+
+     Floating tab bar. Each button shows every .view whose
+     data-view matches its data-target.
+========================================================== -->
+
+<nav
+    class="bottom-nav"
+    aria-label="Main">
+
+    <button
+        type="button"
+        class="nav-btn active"
+        data-target="home"
+        aria-current="page">
+
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9.5"/></svg>
+        Home
+
+    </button>
+
+    <button
+        type="button"
+        class="nav-btn"
+        data-target="spending">
+
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-9-9v9z"/><path d="M15 3.5A9 9 0 0 1 20.5 9H15z"/></svg>
+        Spending
+
+    </button>
+
+    <button
+        type="button"
+        class="nav-btn"
+        data-target="buy">
+
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h2l2.4 11.2a1 1 0 0 0 1 .8h9.2a1 1 0 0 0 1-.8L20 8H6.2"/><circle cx="9.5" cy="20" r="1.3"/><circle cx="17" cy="20" r="1.3"/></svg>
+        To Buy
+
+    </button>
+
+    <button
+        type="button"
+        class="nav-btn"
+        data-target="setup">
+
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>
+        Setup
+
+    </button>
+
+</nav>
 
 
 <script>
@@ -2117,7 +2788,7 @@ button {
 
         {
             name: "Chicken",
-            rate: 220,
+            rate: 390,
             quantity: 100
         },
 
@@ -2775,6 +3446,18 @@ button {
          * =====================================================
          */
 
+        const vehicleMonthly =
+            numberValue(
+                $("#vehicleMonthly")
+            );
+
+
+        const salaryMonthly =
+            numberValue(
+                $("#salaryMonthly")
+            );
+
+
         const dustbinMonthly =
             numberValue(
                 $("#dustbinMonthly")
@@ -2792,6 +3475,8 @@ button {
          */
 
         const monthlyOperating =
+            vehicleMonthly +
+            salaryMonthly +
             dustbinMonthly +
             otherMonthly;
 
@@ -3045,16 +3730,77 @@ button {
          * =====================================================
          */
 
-        $("#sbProfitBowl").textContent =
-            money(profitPerBowl);
+        $("#sbIn").textContent =
+            money(revenue);
+
+
+        $("#sbOut").textContent =
+            money(totalCost);
 
 
         $("#sbNetProfit").textContent =
             money(netProfit);
 
 
-        $("#sbMargin").textContent =
-            margin.toFixed(1) + "%";
+        /*
+         * =====================================================
+         * MONEY IN / OUT BARS
+         * =====================================================
+         *
+         * Both bars share one scale (the larger of the two),
+         * so their lengths compare directly.
+         */
+
+        const flowMax =
+            Math.max(revenue, totalCost);
+
+
+        $("#inBar").style.width =
+            (flowMax > 0 ? revenue / flowMax * 100 : 0) + "%";
+
+
+        $("#outBar").style.width =
+            (flowMax > 0 ? totalCost / flowMax * 100 : 0) + "%";
+
+
+        $("#keepMath").textContent =
+            money(revenue) +
+            " in − " +
+            money(totalCost) +
+            " out";
+
+
+        const periodName =
+            mode === "monthly"
+                ? "Per month"
+                : "Per day";
+
+
+        const bowlsText =
+            totalBowls.toLocaleString("en-IN") +
+            " bowls";
+
+
+        $("#periodChip").textContent =
+            periodName + " · " + bowlsText;
+
+
+        $("#buyChip").textContent =
+            bowlsText;
+
+
+        $("#buySub").textContent =
+            (
+                mode === "monthly"
+                    ? "Shopping list for 1 month (" + days + " days)"
+                    : "Shopping list for 1 day"
+            ) +
+            " · switch Daily / Monthly above";
+
+
+        $("#spendSub").textContent =
+            periodName +
+            " · every rupee you spend, split by category";
 
 
         /*
@@ -3395,8 +4141,9 @@ button {
          * OPERATING & FIXED
          *
          * Not consumed per bowl, but still spent over the
-         * period. Dustbin covers and other expenses are
-         * entered monthly, so they are divided down when
+         * period. Vehicle rent, salary, dustbin covers and
+         * other expenses are entered monthly, so they are
+         * divided down when
          * the daily view is active. Fixed costs are already
          * entered for the selected period.
          */
@@ -3415,6 +4162,20 @@ button {
 
         addInventoryGroup(
             "Operating &amp; Fixed"
+        );
+
+
+        addInventoryRow(
+            "Vehicle Rent",
+            periodLabelText,
+            vehicleMonthly / periodDivisor
+        );
+
+
+        addInventoryRow(
+            "Worker Salary",
+            periodLabelText,
+            salaryMonthly / periodDivisor
         );
 
 
@@ -3501,6 +4262,125 @@ button {
                 packagingInventoryCost +
                 totalFixedForPeriod
             );
+
+
+        $("#buyTotalTop").textContent =
+            money(totalCost);
+
+
+        /*
+         * =====================================================
+         * SPENDING SPLIT
+         * =====================================================
+         *
+         * Period spend by category. The five parts add up to
+         * Total Cost, so the bar is the Money Out figure
+         * broken apart.
+         */
+
+        const splitParts = [
+
+            {
+                name: "Food ingredients",
+                value: foodInventoryCost,
+                color: "var(--c-food)"
+            },
+
+            {
+                name: "Cooking oil",
+                value: oilInventoryCost,
+                color: "var(--c-oil)"
+            },
+
+            {
+                name: "LPG gas",
+                value: gasInventoryCost,
+                color: "var(--c-gas)"
+            },
+
+            {
+                name: "Bowl & packaging",
+                value: packagingInventoryCost,
+                color: "var(--c-pack)"
+            },
+
+            {
+                name: "Vehicle rent",
+                value: vehicleMonthly / periodDivisor,
+                color: "var(--c-rent)"
+            },
+
+            {
+                name: "Worker salary",
+                value: salaryMonthly / periodDivisor,
+                color: "var(--c-salary)"
+            },
+
+            {
+                name: "Other running & fixed",
+                value:
+                    totalFixedForPeriod -
+                    (vehicleMonthly + salaryMonthly) / periodDivisor,
+                color: "var(--c-fixed)"
+            }
+
+        ]
+            .filter(part => part.value > 0)
+            .sort((a, b) => b.value - a.value);
+
+
+        const pct = value =>
+            totalCost > 0
+                ? value / totalCost * 100
+                : 0;
+
+
+        const segments =
+            splitParts
+                .map(part => `
+                    <div
+                        class="split-seg"
+                        style="flex-grow:${part.value};background:${part.color}"
+                        title="${part.name}: ${money(part.value)}">
+                    </div>
+                `)
+                .join("");
+
+
+        $("#splitBarHome").innerHTML =
+            segments;
+
+
+        $("#splitBarFull").innerHTML =
+            segments;
+
+
+        $("#splitMiniHome").innerHTML =
+            splitParts
+                .map(part => `
+                    <span>
+                        <i class="split-dot" style="background:${part.color}"></i>
+                        ${part.name} ${pct(part.value).toFixed(0)}%
+                    </span>
+                `)
+                .join("");
+
+
+        $("#splitLegend").innerHTML =
+            splitParts
+                .map(part => `
+                    <div class="split-row">
+                        <span class="split-dot" style="background:${part.color}"></span>
+                        <span>${part.name}</span>
+                        <strong>${money(part.value)}</strong>
+                        <span class="split-pct">${pct(part.value).toFixed(1)}%</span>
+                    </div>
+                `)
+                .join("");
+
+
+        $("#spendTotal").textContent =
+            money(totalCost);
 
 
         /*
@@ -3682,6 +4562,14 @@ button {
                  * Operating
                  */
 
+                $("#vehicleMonthly").value =
+                    15000;
+
+
+                $("#salaryMonthly").value =
+                    7000;
+
+
                 $("#dustbinMonthly").value =
                     60;
 
@@ -3769,16 +4657,43 @@ button {
         $("#moneyBento");
 
 
+    /*
+     * Also kept hidden near the top of the page, so on the
+     * other tabs it doesn't cover the header before any
+     * scrolling has happened.
+     */
+
+    let bentoVisible = true;
+
+
+    function updateStickyBar() {
+
+        $("#stickyBar")
+            .classList.toggle(
+                "is-hidden",
+                bentoVisible ||
+                window.scrollY < 90
+            );
+
+    }
+
+
+    window.addEventListener(
+        "scroll",
+        updateStickyBar,
+        { passive: true }
+    );
+
+
     if (window.IntersectionObserver) {
 
         new IntersectionObserver(
             ([entry]) => {
 
-                $("#stickyBar")
-                    .classList.toggle(
-                        "is-hidden",
-                        entry.isIntersecting
-                    );
+                bentoVisible =
+                    entry.isIntersecting;
+
+                updateStickyBar();
 
             },
             {
@@ -3791,11 +4706,123 @@ button {
 
     /*
      * =========================================================
+     * BOTTOM NAV / VIEWS
+     * =========================================================
+     *
+     * A view can be split across several <section>s that
+     * share a data-view name; all of them are shown together.
+     * Any element with data-target (nav buttons, "see more"
+     * links) switches view. Last tab is remembered per
+     * browser, and the URL hash allows linking to a tab.
+     */
+
+    const views =
+        $$(".view");
+
+
+    const navButtons =
+        $$(".nav-btn");
+
+
+    const viewNames =
+        new Set(
+            views.map(view => view.dataset.view)
+        );
+
+
+    function showView(name, scroll = true) {
+
+        if (!viewNames.has(name)) {
+            name = "home";
+        }
+
+
+        views.forEach(view => {
+
+            view.classList.toggle(
+                "is-active",
+                view.dataset.view === name
+            );
+
+        });
+
+
+        navButtons.forEach(button => {
+
+            const active =
+                button.dataset.target === name;
+
+            button.classList.toggle("active", active);
+
+            if (active) {
+                button.setAttribute("aria-current", "page");
+            } else {
+                button.removeAttribute("aria-current");
+            }
+
+        });
+
+
+        try {
+            localStorage.setItem("wtf-tab", name);
+        } catch (error) {
+            /* storage unavailable — tab just isn't remembered */
+        }
+
+
+        if (location.hash !== "#" + name) {
+            history.replaceState(null, "", "#" + name);
+        }
+
+
+        if (scroll) {
+            window.scrollTo(0, 0);
+        }
+
+    }
+
+
+    document.addEventListener(
+        "click",
+        event => {
+
+            const trigger =
+                event.target.closest("[data-target]");
+
+            if (trigger) {
+                showView(trigger.dataset.target);
+            }
+
+        }
+    );
+
+
+    let startView =
+        location.hash.slice(1);
+
+
+    if (!viewNames.has(startView)) {
+
+        try {
+            startView =
+                localStorage.getItem("wtf-tab") || "home";
+        } catch (error) {
+            startView = "home";
+        }
+
+    }
+
+
+    /*
+     * =========================================================
      * INITIALIZE
      * =========================================================
      */
 
     calculate();
+
+
+    showView(startView, false);
 
 })();
 
