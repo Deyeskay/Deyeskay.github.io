@@ -39,7 +39,10 @@ const MENU = [
 ];
 
 const $ = (id) => document.getElementById(id);
-const rupees = (n) => "₹" + n;
+const rupees = (n) => "₹" + n.toLocaleString("en-IN");
+
+// Namespaced because every app under deyeskay.github.io shares one localStorage.
+const ORDERS_KEY = "munchDistrict.orders.v1";
 
 // Item names are unique, so the name doubles as the cart key.
 const allItems = MENU.flatMap((group) => group.items);
@@ -167,7 +170,6 @@ function showMenu() {
 
 function showPay() {
   const total = cartTotal();
-  $("pay-amount").textContent = rupees(total);
   $("pay-name").textContent = UPI.name;
   $("qr").innerHTML = qrSvg(upiLink(total));
   $("qr").setAttribute("aria-label", "UPI payment QR code for " + rupees(total));
@@ -184,9 +186,219 @@ function showPay() {
       return li;
     })
   );
+  renderPayment();
+  $("toast").hidden = true;
   $("menu-screen").hidden = true;
   $("pay-screen").hidden = false;
   window.scrollTo(0, 0);
+}
+
+function paymentState() {
+  const total = cartTotal();
+  const mode = document.querySelector('input[name="pay-mode"]:checked').value;
+  const cash = Math.max(0, Number($("cash-received").value) || 0);
+  const remaining = Math.round(Math.max(0, total - cash) * 100) / 100;
+  const change = Math.round(Math.max(0, cash - total) * 100) / 100;
+  return { total, mode, cash, remaining, change, settled: mode === "upi" || remaining === 0 };
+}
+
+function renderPayment() {
+  const { total, mode, remaining, change, settled } = paymentState();
+  const isCash = mode === "cash";
+  $("pay-title").textContent = isCash ? "Collect cash" : "Scan & Pay";
+  $("pay-amount").textContent = rupees(total);
+  $("upi-panel").hidden = isCash;
+  $("cash-panel").hidden = !isCash;
+
+  const balance = $("cash-balance");
+  balance.classList.toggle("is-due", remaining > 0);
+  if (remaining > 0) balance.textContent = "Remaining to pay: " + rupees(remaining);
+  else if (change > 0) balance.textContent = "Change to return: " + rupees(change);
+  else balance.textContent = "Paid in full";
+
+  $("payment-received").disabled = !settled;
+}
+
+function loadOrders() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(ORDERS_KEY));
+    return Array.isArray(saved) ? saved : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveOrders(orders) {
+  localStorage.setItem(ORDERS_KEY, JSON.stringify(orders));
+}
+
+function acceptPayment() {
+  const { total, mode, cash, change, settled } = paymentState();
+  if (!settled || total === 0) return;
+
+  const orders = loadOrders();
+  const number = orders.reduce((max, order) => Math.max(max, order.number), 0) + 1;
+  orders.push({
+    number,
+    customer: $("customer-name").value.trim(),
+    items: cartLines().map((item) => ({ name: item.name, price: item.price, qty: qtyOf(item.name) })),
+    total,
+    mode,
+    cashReceived: mode === "cash" ? cash : null,
+    change: mode === "cash" ? change : null,
+    createdAt: new Date().toISOString(),
+    servedAt: null,
+  });
+
+  try {
+    saveOrders(orders);
+  } catch {
+    // Keep the cart so the order isn't lost when the browser refuses to store it.
+    alert("Could not save this order. Browser storage is full or blocked.");
+    return;
+  }
+
+  resetOrderForm();
+  showMenu();
+  renderOrdersButton();
+  showToast("Order #" + number + " saved");
+}
+
+function resetOrderForm() {
+  cart.clear();
+  activeTab = 0;
+  $("customer-name").value = "";
+  $("cash-received").value = "";
+  document.querySelector('input[name="pay-mode"][value="upi"]').checked = true;
+  renderTabs();
+  renderItems();
+  renderBar();
+}
+
+let toastTimer;
+function showToast(message) {
+  $("toast").textContent = message;
+  $("toast").hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { $("toast").hidden = true; }, 2500);
+}
+
+let ordersTab = "mine";
+
+function renderOrdersButton() {
+  $("orders-count").textContent = loadOrders().filter((order) => !order.servedAt).length;
+}
+
+function markServed(number) {
+  const orders = loadOrders();
+  const order = orders.find((candidate) => candidate.number === number);
+  if (!order) return;
+  order.servedAt = new Date().toISOString();
+  try {
+    saveOrders(orders);
+  } catch {
+    alert("Could not update this order. Browser storage is full or blocked.");
+    return;
+  }
+  renderOrdersButton();
+  renderOrders();
+}
+
+function textEl(tag, className, text) {
+  const el = document.createElement(tag);
+  if (className) el.className = className;
+  el.textContent = text;
+  return el;
+}
+
+function paymentText(order) {
+  if (order.mode === "upi") return "UPI";
+  return "Cash " + rupees(order.cashReceived) +
+    (order.change > 0 ? " · change " + rupees(order.change) : "");
+}
+
+function formatTime(iso) {
+  return new Date(iso).toLocaleString("en-IN", {
+    day: "numeric", month: "short", hour: "numeric", minute: "2-digit",
+  });
+}
+
+function orderCard(order) {
+  const card = document.createElement("article");
+  card.className = "order";
+
+  const head = document.createElement("div");
+  head.className = "order-row";
+  head.append(
+    textEl("h3", "", "#" + order.number + (order.customer ? " · " + order.customer : "")),
+    textEl("time", "order-time", formatTime(order.createdAt))
+  );
+
+  const lines = document.createElement("ul");
+  order.items.forEach((item) => lines.append(textEl("li", "", item.qty + " × " + item.name)));
+
+  const foot = document.createElement("div");
+  foot.className = "order-row order-foot";
+  const money = document.createElement("div");
+  money.append(textEl("b", "", rupees(order.total)), textEl("span", "order-mode", paymentText(order)));
+  foot.append(money);
+
+  if (order.servedAt) {
+    foot.append(textEl("span", "served-tag", "Served"));
+  } else if (ordersTab === "mine") {
+    const served = textEl("button", "served-btn", "Served");
+    served.type = "button";
+    served.setAttribute("aria-label", "Mark order " + order.number + " as served");
+    served.addEventListener("click", () => markServed(order.number));
+    foot.append(served);
+  } else {
+    foot.append(textEl("span", "pending-tag", "Not served"));
+  }
+
+  card.append(head, lines, foot);
+  return card;
+}
+
+function billsSummary(orders) {
+  const sum = (list) => list.reduce((total, order) => total + order.total, 0);
+  const box = document.createElement("section");
+  box.className = "bills";
+  box.setAttribute("aria-label", "Total bills");
+  const stat = (label, value) => {
+    const cell = document.createElement("div");
+    cell.append(textEl("span", "", label), textEl("b", "", value));
+    return cell;
+  };
+  box.append(
+    stat("Total bills", String(orders.length)),
+    stat("Total amount", rupees(sum(orders))),
+    stat("UPI", rupees(sum(orders.filter((order) => order.mode === "upi")))),
+    stat("Cash", rupees(sum(orders.filter((order) => order.mode === "cash"))))
+  );
+  return box;
+}
+
+function renderOrders() {
+  const orders = loadOrders();
+  const isMine = ordersTab === "mine";
+  $("tab-mine").setAttribute("aria-selected", String(isMine));
+  $("tab-all").setAttribute("aria-selected", String(!isMine));
+
+  // My Orders runs oldest first, the order they get served in. All Orders shows newest first.
+  const shown = isMine ? orders.filter((order) => !order.servedAt) : [...orders].reverse();
+  const nodes = shown.map(orderCard);
+  if (!shown.length) {
+    nodes.push(textEl("p", "orders-empty", isMine ? "No orders waiting to be served." : "No orders yet."));
+  }
+  if (!isMine) nodes.unshift(billsSummary(orders));
+  $("orders-list").replaceChildren(...nodes);
+}
+
+function openOrders() {
+  ordersTab = "mine";
+  renderOrders();
+  $("toast").hidden = true;
+  $("orders-popup").showModal();
 }
 
 // With items in the cart the popup QR carries the total; with none, the customer types the amount.
@@ -208,15 +420,30 @@ $("qr-popup").addEventListener("click", (event) => {
 
 $("next").addEventListener("click", showPay);
 $("back").addEventListener("click", showMenu);
-$("new-order").addEventListener("click", () => {
-  cart.clear();
-  activeTab = 0;
-  renderTabs();
-  renderItems();
-  renderBar();
-  showMenu();
+$("payment-received").addEventListener("click", acceptPayment);
+$("cash-received").addEventListener("input", renderPayment);
+document.querySelectorAll('input[name="pay-mode"]').forEach((radio) => {
+  radio.addEventListener("change", renderPayment);
 });
+
+$("menu-open").addEventListener("click", () => {
+  $("toast").hidden = true;
+  $("menu-popup").showModal();
+});
+$("menu-close").addEventListener("click", () => $("menu-popup").close());
+$("menu-popup").addEventListener("click", (event) => {
+  if (event.target === $("menu-popup")) $("menu-popup").close();
+});
+
+$("orders-open").addEventListener("click", openOrders);
+$("orders-close").addEventListener("click", () => $("orders-popup").close());
+$("orders-popup").addEventListener("click", (event) => {
+  if (event.target === $("orders-popup")) $("orders-popup").close();
+});
+$("tab-mine").addEventListener("click", () => { ordersTab = "mine"; renderOrders(); });
+$("tab-all").addEventListener("click", () => { ordersTab = "all"; renderOrders(); });
 
 renderTabs();
 renderItems();
 renderBar();
+renderOrdersButton();

@@ -12,7 +12,12 @@
   <!-- Step 1: select items -->
   <main id="menu-screen" class="screen">
     <header class="brand">
-      <button id="qr-open" class="qr-open" type="button" aria-label="Show payment QR code">
+      <button id="menu-open" class="icon-btn menu-open" type="button" aria-label="Show full menu">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <path d="M4 6h16M4 12h16M4 18h16"/>
+        </svg>
+      </button>
+      <button id="qr-open" class="icon-btn qr-open" type="button" aria-label="Show payment QR code">
         <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>
           <path d="M14 14h3v3h-3zM21 14v.01M21 21h-4M21 17.5V21M14 21v-.01"/>
@@ -24,6 +29,10 @@
 
     <nav id="tabs" class="tabs" role="tablist" aria-label="Menu categories"></nav>
     <section id="items" class="items" aria-live="polite"></section>
+
+    <button id="orders-open" class="orders-open" type="button">
+      My Orders <b id="orders-count">0</b>
+    </button>
 
     <footer class="bar">
       <div class="bar-total">
@@ -43,11 +52,33 @@
   <!-- Step 2: scan and pay -->
   <main id="pay-screen" class="screen pay" hidden>
     <div class="pay-card">
-      <p class="pay-label">Scan &amp; Pay</p>
+      <label class="field">
+        <span>Customer name</span>
+        <input id="customer-name" type="text" maxlength="40" autocomplete="off" placeholder="Optional">
+      </label>
+
+      <fieldset class="mode">
+        <legend>Payment mode</legend>
+        <label><input type="radio" name="pay-mode" value="upi" checked><span>UPI</span></label>
+        <label><input type="radio" name="pay-mode" value="cash"><span>Cash</span></label>
+      </fieldset>
+
+      <p id="pay-title" class="pay-label"></p>
       <p id="pay-amount" class="pay-amount"></p>
-      <div id="qr" class="qr" role="img"></div>
-      <p class="pay-apps">Open PhonePe, Google Pay or any UPI app and scan. The amount fills in automatically.</p>
-      <p class="pay-to">Paying <b id="pay-name"></b></p>
+
+      <div id="upi-panel">
+        <div id="qr" class="qr" role="img"></div>
+        <p class="pay-apps">Open PhonePe, Google Pay or any UPI app and scan. The amount fills in automatically.</p>
+        <p class="pay-to">Paying <b id="pay-name"></b></p>
+      </div>
+
+      <div id="cash-panel" hidden>
+        <label class="field field-cash">
+          <span>Cash received</span>
+          <input id="cash-received" type="number" inputmode="decimal" min="0" step="any" placeholder="0">
+        </label>
+        <p id="cash-balance" class="cash-balance" role="status"></p>
+      </div>
     </div>
 
     <section class="summary" aria-label="Your order">
@@ -58,9 +89,33 @@
 
     <div class="pay-actions">
       <button id="back" class="btn-ghost" type="button">← Back</button>
-      <button id="new-order" class="btn-solid" type="button">New order</button>
+      <button id="payment-received" class="btn-solid" type="button">Payment received</button>
     </div>
   </main>
+
+  <!-- Full menu popup, opened from the icon on the menu screen -->
+  <dialog id="menu-popup" class="menu-popup" aria-label="Full menu">
+    <button id="menu-close" class="qr-close menu-close" type="button" aria-label="Close">×</button>
+    <img src="images/menu.jpg" width="1086" height="1448" loading="lazy"
+         alt="The Loaded and Dessert Menu with all items and prices">
+  </dialog>
+
+  <!-- Orders popup, opened from the floating button on the menu screen -->
+  <dialog id="orders-popup" class="orders-popup" aria-labelledby="orders-title">
+    <div class="orders-body">
+      <header class="orders-head">
+        <h2 id="orders-title">Orders</h2>
+        <button id="orders-close" class="qr-close" type="button" aria-label="Close">×</button>
+      </header>
+      <nav class="tabs orders-tabs" role="tablist" aria-label="Orders">
+        <button id="tab-mine" class="tab" type="button" role="tab">My Orders</button>
+        <button id="tab-all" class="tab" type="button" role="tab">All Orders</button>
+      </nav>
+      <div id="orders-list" class="orders-list"></div>
+    </div>
+  </dialog>
+
+  <p id="toast" class="toast" role="status" hidden></p>
 
   <!-- QR popup, opened from the icon on the menu screen -->
   <dialog id="qr-popup" class="qr-popup" aria-labelledby="qr-popup-title">
