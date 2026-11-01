@@ -378,6 +378,59 @@ function billsSummary(orders) {
   return box;
 }
 
+function csvField(value) {
+  if (value === null || value === undefined) return "";
+  const text = String(value);
+  return /[",\r\n]/.test(text) ? '"' + text.replace(/"/g, '""') + '"' : text;
+}
+
+// Excel runs a cell starting with one of these as a formula, so names get neutralised.
+const csvSafeText = (text) => (/^[=+\-@\t\r]/.test(text) ? "'" + text : text);
+
+// The sv-SE locale formats local time as "2026-11-02 19:22:10", which Excel reads as a date.
+const csvTime = (iso) => (iso ? new Date(iso).toLocaleString("sv-SE") : "");
+
+function ordersCsv(orders) {
+  const header = [
+    "Order", "Date", "Customer", "Items", "Total", "Payment mode",
+    "Cash received", "Change returned", "Status", "Served at",
+  ];
+  const rows = orders.map((order) => [
+    order.number,
+    csvTime(order.createdAt),
+    csvSafeText(order.customer),
+    order.items.map((item) => item.qty + " x " + item.name).join("; "),
+    order.total,
+    order.mode === "upi" ? "UPI" : "Cash",
+    order.cashReceived,
+    order.change,
+    order.servedAt ? "Served" : "Not served",
+    csvTime(order.servedAt),
+  ]);
+  return [header, ...rows].map((row) => row.map(csvField).join(",")).join("\r\n");
+}
+
+function exportOrders() {
+  // The leading byte-order mark tells Excel the file is UTF-8, so names in any script display correctly.
+  const blob = new Blob(["﻿" + ordersCsv(loadOrders())], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "munch-district-orders-" + csvTime(new Date().toISOString()).slice(0, 10) + ".csv";
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+}
+
+function exportButton(orders) {
+  const button = textEl("button", "export-btn", "Export orders (CSV)");
+  button.type = "button";
+  button.disabled = orders.length === 0;
+  button.addEventListener("click", exportOrders);
+  return button;
+}
+
 function renderOrders() {
   const orders = loadOrders();
   const isMine = ordersTab === "mine";
@@ -390,7 +443,7 @@ function renderOrders() {
   if (!shown.length) {
     nodes.push(textEl("p", "orders-empty", isMine ? "No orders waiting to be served." : "No orders yet."));
   }
-  if (!isMine) nodes.unshift(billsSummary(orders));
+  if (!isMine) nodes.unshift(billsSummary(orders), exportButton(orders));
   $("orders-list").replaceChildren(...nodes);
 }
 

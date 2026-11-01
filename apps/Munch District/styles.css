@@ -376,6 +376,17 @@ button { font: inherit; cursor: pointer; }
 .bills span { display: block; font-size: .8rem; opacity: .85; }
 .bills b { font-size: 1.15rem; font-variant-numeric: tabular-nums; }
 
+.export-btn {
+  flex: none;
+  min-height: 44px;
+  background: var(--card);
+  border: 1.5px solid var(--brown);
+  border-radius: 12px;
+  color: var(--brown);
+  font-weight: 700;
+}
+.export-btn:disabled { border-color: var(--line); color: #8a8378; cursor: default; }
+
 .order {
   flex: none;
   padding: 12px 14px;
